@@ -1,45 +1,42 @@
-# ⚡ DeepCite: Ship LangChain & LangGraph Agents on Google Cloud with Zero Lock-In (`agents-cli` Extension System)
+# DeepCite: LangChain & LangGraph Agents on Google Cloud with `agents-cli`
 
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Agents_CLI_v1.8+-4285F4?logo=google-cloud&logoColor=white)](https://github.com/google/agents-cli)
 [![Framework](https://img.shields.io/badge/Framework-LangChain_%7C_LangGraph-1C3C3C?logo=chainlink&logoColor=white)](https://langchain-ai.github.io/langgraph/)
-[![Zero Lock-In](https://img.shields.io/badge/google--adk_Dependency-0%25_(Zero_Lock--In)-FF6B6B)](#)
+[![Zero Lock-In](https://img.shields.io/badge/google--adk_Dependency-None-FF6B6B)](#)
 [![Protocol](https://img.shields.io/badge/Protocol-A2A_%7C_FastAPI-06B6D4)](https://google.github.io/A2A/)
 [![Extension System](https://img.shields.io/badge/Agents_CLI-Extension_System_v1alpha1-10B981)](https://developers.googleblog.com/powering-the-agent-development-lifecycle-with-any-framework-from-adk-to-langchain-and-beyond/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](#)
 
-> **🔥 Bring Your Own Agent Framework to Google Cloud.**  
-> **Zero `google-adk` lock-in. 100% of the production lifecycle.**  
-> Scaffold, debug in **LangGraph Studio**, grade with **Vertex AI Evals**, enforce **SBOM supply-chain gates**, and ship **A2A-native containers to Cloud Run**—all from a single unified `agents-cli` command surface.
+Production LangChain and LangGraph agent wired into the Google Agents CLI (`agents-cli`) lifecycle with zero `google-adk` dependency. Scaffold, debug in LangGraph Studio, grade traces with Vertex AI Evals, enforce SBOM pre-deploy checks, and deploy A2A containers to Cloud Run from one CLI.
 
 ---
 
-## 💡 Why This Changes the Agent Engineering Game
+## Why Use the `agents-cli` Extension System?
 
-Until now, agent toolchains forced an impossible choice: adopt their opinionated framework or build your own CI/CD, evaluation harness, A2A server, and Cloud Run deployment pipelines from scratch.
+Out of ~24 commands in `agents-cli`, only 6 depend on the agent runtime (`run`, `playground`, `eval.generate`, `eval.dataset`, `eval.optimize`, and `publish.gemini-enterprise`). The remaining 18+ commands (`deploy`, `eval grade`, `eval compare`, `infra`, `lint`, `login`) are framework-agnostic.
 
-With the **Google Agents CLI Extension System (`v1.5+` / `v1.8+`)**, **only 6 commands** care about the agent runtime—and they are cleanly hot-swapped via a single [`agents-cli-extension.yaml`](file:///Users/sanketbisne/more-than-agents/scalfod-langgraph-agentscli/agents-cli-extension.yaml) file, while **18+ production commands** (`deploy`, `eval grade`, `eval compare`, `infra`, `lint`, `login`) work out of the box:
+Instead of forking the CLI or maintaining wrapper scripts, a single [`agents-cli-extension.yaml`](file:///Users/sanketbisne/more-than-agents/scalfod-langgraph-agentscli/agents-cli-extension.yaml) file overrides the 6 runtime-specific commands and leaves the rest of the lifecycle intact:
 
-| Approach | Framework Freedom | Native Vertex AI Evals & A2A | Custom Org Policy Gates (SBOM / SecOps) | Maintenance Tax |
+| Approach | Framework Freedom | Native Vertex AI Evals & A2A | Custom Org Policy Gates (SBOM / SecOps) | Maintenance Overhead |
 | :--- | :---: | :---: | :---: | :---: |
-| **Forking the CLI** | ✅ | ⚠️ Breaks on upstream releases | ✅ | ❌ High (permanent rebase tax) |
-| **Custom Bash Wrapper Scripts** | ✅ | ⚠️ Manual wiring | ❌ Bypassed by devs & coding agents | ❌ Medium-High |
-| **`agents-cli` Extension System (This Repo)** | **✅ Any Framework (LangGraph, Deep Agents)** | **✅ Built-in (`eval grade`, FastAPI A2A)** | **✅ Native `[↑ override]` + SHA Lockfile** | **✅ Zero (Upstream upgrades for free)** |
+| **Forking the CLI** | Yes | Breaks on upstream releases | Yes | High (manual rebasing) |
+| **Custom Bash Wrapper Scripts** | Yes | Manual wiring | Often bypassed in local dev/CI | Medium-High |
+| **`agents-cli` Extension System (This Repo)** | **Any Framework (LangGraph, Deep Agents)** | **Built-in (`eval grade`, FastAPI A2A)** | **Native `[↑ override]` + SHA Lockfile** | **None (Upstream upgrades work out of the box)** |
 
 ---
 
-## 🌟 What This Project Demonstrates
+## What Is Included in This Repo
 
 1. **Zero-ADK LangChain / LangGraph Lifecycle**:
    - Built with `langchain.agents.create_agent` compiling into a LangGraph `CompiledStateGraph` (`root_agent` in `app/agent.py`).
-   - Intercepts the 6 framework-coupled commands (`run`, `playground`, `eval.generate`, `eval.dataset`, `eval.optimize`, `publish.gemini-enterprise`) via `agents-cli-extension.yaml` while inheriting all ~18 framework-agnostic commands (`deploy`, `eval grade`, `eval compare`, `infra`, `lint`, `login`) untouched.
-2. **DeepCite Iterative Research & Critique Agent (`Plan → Search → Critique → Report`)**:
-   - **`create_research_plan`**: Decomposes technical research prompts into structured sub-questions.
-   - **`search_curated_kb` / `search_arxiv_papers` / `search_wikipedia_summary`**: Retrieves grounded evidence with verifiable source IDs (`[KB-...]`, `[ARXIV-...]`, `[WIKI-...]`) and deterministic offline fallbacks for reproducible CI evaluations.
-   - **`critique_research_draft`**: Audits draft responses for citation density, coverage, and grounding before final synthesis.
+   - Overrides the 6 framework-coupled commands (`run`, `playground`, `eval.generate`, `eval.dataset`, `eval.optimize`, `publish.gemini-enterprise`) via `agents-cli-extension.yaml` while keeping all ~18 framework-agnostic commands (`deploy`, `eval grade`, `eval compare`, `infra`, `lint`, `login`) unchanged.
+2. **DeepCite Iterative Research & Critique Agent (`Plan -> Search -> Critique -> Report`)**:
+   - **`create_research_plan`**: Breaks down technical research prompts into sub-questions.
+   - **`search_curated_kb` / `search_arxiv_papers` / `search_wikipedia_summary`**: Fetches grounded evidence with source IDs (`[KB-...]`, `[ARXIV-...]`, `[WIKI-...]`) and deterministic offline fallbacks for reproducible CI evaluations.
+   - **`critique_research_draft`**: Checks draft responses for citation density, coverage, and grounding before final synthesis.
 3. **Custom Enterprise CLI Extensions (`commands.override` + `commands.add`)**:
-   - **New Command (`agents-cli research-report`)**: Executes the LangGraph agent, verifies inline citations, and exports a timestamped Markdown report to `reports/`.
-   - **Command Override (`extensions/sbom-deploy`)**: Wraps `agents-cli deploy` with a Software Bill of Materials (SBOM) & pre-deploy governance check, then delegates safely to native `agents-cli deploy` using the built-in `AGENTS_CLI_DISABLE_OVERRIDES=1` recursion guard.
+   - **New Command (`agents-cli research-report`)**: Runs the LangGraph agent, verifies inline citations, and writes a timestamped Markdown report to `reports/`.
+   - **Command Override (`extensions/sbom-deploy`)**: Wraps `agents-cli deploy` with a Software Bill of Materials (SBOM) and pre-deploy governance check, then delegates to native `agents-cli deploy` using the `AGENTS_CLI_DISABLE_OVERRIDES=1` environment variable.
 
 ---
 
