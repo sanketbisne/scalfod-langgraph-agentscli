@@ -1,17 +1,17 @@
 /**
- * Google Cloud Next '27 Keynote Deck Generator (Sundar Pichai Keynote Style)
+ * Google Cloud Next '27 Deck Generator
  * Uses internal Google typography: Google Sans Display, Google Sans, Google Sans Text, Google Sans Mono
  *
  * HOW TO GENERATE IN GOOGLE SLIDES:
  * 1. Go to https://script.google.com -> "New Project"
  * 2. Paste this entire file into Code.gs
- * 3. Select `createCloudNext27KeynoteDeck` and click "Run"
+ * 3. Select `createCloudNext27Deck` and click "Run"
  * 4. Open the generated Google Slides URL logged in the Execution Log!
  */
 
-function createCloudNext27KeynoteDeck() {
+function createCloudNext27Deck() {
   var deck = SlidesApp.create(
-    "Google Cloud Next '27 Keynote | Open Agent Development Lifecycle (Agents CLI v1.8+)"
+    "Google Cloud Next '27 | Open Agent Development Lifecycle (Agents CLI v1.8+)"
   );
 
   // Official Google Typographic Trio
@@ -20,7 +20,7 @@ function createCloudNext27KeynoteDeck() {
   var FONT_BODY = "Google Sans Text";
   var FONT_MONO = "Google Sans Mono";
 
-  // Google Cloud Next '27 Keynote Palette
+  // Google Cloud Next '27 Palette
   var STAGE_DARK = "#0E1015";
   var CARD_DARK = "#161922";
   var CODE_DARK = "#131314";
@@ -60,7 +60,7 @@ function createCloudNext27KeynoteDeck() {
     } catch (e) {}
   }
 
-  function setupKeynoteSlide(slide, isDark, eyebrowText, eyebrowColor, titleText, subtitleText, slideNumStr, notesText) {
+  function setupStageSlide(slide, isDark, eyebrowText, eyebrowColor, titleText, subtitleText, slideNumStr, notesText) {
     slide.getBackground().setSolidFill(isDark ? STAGE_DARK : STAGE_LIGHT);
     addFourColorBar(slide);
 
@@ -134,7 +134,7 @@ function createCloudNext27KeynoteDeck() {
   }
 
   // =========================================================================
-  // SLIDE 01: Keynote Opening (Dark Stage)
+  // SLIDE 01: Opening (Dark Stage)
   // =========================================================================
   var s1 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
   s1.getBackground().setSolidFill(STAGE_DARK);
@@ -144,7 +144,7 @@ function createCloudNext27KeynoteDeck() {
     "Good morning everyone, and welcome to Google Cloud Next '27. Over the past year, developers have moved from building single-agent prototypes to running mission-critical agentic systems in production. Today we are opening up the entire Agent Development Lifecycle to every framework: from ADK to LangChain, LangGraph, and beyond."
   );
 
-  var s1Pill = s1.insertTextBox("GOOGLE CLOUD NEXT '27  |  OPENING KEYNOTE  |  AGENTS CLI v1.8+", 48, 54, 540, 24);
+  var s1Pill = s1.insertTextBox("GOOGLE CLOUD NEXT '27  |  DEVELOPER SESSION  |  AGENTS CLI v1.8+", 48, 54, 540, 24);
   s1Pill.getText().getTextStyle().setFontFamily(FONT_MONO).setFontSize(10).setBold(true).setForegroundColor(GOOGLE_BLUE_LIGHT);
 
   var s1Hero = s1.insertTextBox("Every agent framework.\nOne production lifecycle.", 48, 95, 624, 115);
@@ -163,7 +163,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 02: Sundar's Big Numbers Impact Slide (Dark Stage)
   // =========================================================================
   var s2 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s2, true,
     "By The Numbers", GOOGLE_BLUE_LIGHT,
     "Decoupling the lifecycle from the runtime.",
@@ -197,7 +197,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 03: The Developer Dilemma (Clean Light Stage)
   // =========================================================================
   var s3 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s3, false,
     "Why Extensions Matter", GOOGLE_BLUE,
     "Ending the tradeoff between velocity and choice.",
@@ -231,7 +231,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 04: Inside the Command Surface (6 vs 18 Split)
   // =========================================================================
   var s4 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s4, false,
     "Command Surface Architecture", GOOGLE_GREEN,
     "Inside the Agents CLI Command Surface (6 vs. 18 Split)",
@@ -258,7 +258,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 05: Live Demo Act I - Scaffolding (Dark Stage)
   // =========================================================================
   var s5 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s5, true,
     "Live Demo | Act 1", GOOGLE_BLUE_LIGHT,
     "Scaffold a pure LangGraph project in one command.",
@@ -283,7 +283,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 06: Project Structure & CompiledStateGraph
   // =========================================================================
   var s6 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s6, false,
     "Codebase Architecture", "#B06000",
     "Project Structure & LangGraph CompiledStateGraph",
@@ -331,7 +331,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 07: DeepCite Agent Architecture
   // =========================================================================
   var s7 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s7, false,
     "Reference Workload", GOOGLE_BLUE,
     "DeepCite Architecture (Plan -> Search -> Critique -> Report)",
@@ -372,7 +372,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 08: Running Locally & LangGraph Studio + Evals (Dark Stage)
   // =========================================================================
   var s8 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s8, true,
     "Live Demo | Act 2 & Act 3", GOOGLE_GREEN_LIGHT,
     "LangGraph Studio & Framework-Agnostic Evaluations",
@@ -407,7 +407,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 09: Custom Enterprise Extensions (Dark Stage)
   // =========================================================================
   var s9 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s9, true,
     "Live Demo | Act 4", GOOGLE_RED_LIGHT,
     "Authoring Custom Enterprise Extensions (sbom-deploy)",
@@ -447,7 +447,7 @@ function createCloudNext27KeynoteDeck() {
   // SLIDE 10: Sundar's Closing Bento Grid Summary (Dark Stage)
   // =========================================================================
   var s10 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupKeynoteSlide(
+  setupStageSlide(
     s10, true,
     "Google Cloud Next '27 Summary", GOOGLE_BLUE_LIGHT,
     "The Open Agent Development Lifecycle",
@@ -499,5 +499,5 @@ function createCloudNext27KeynoteDeck() {
   );
 
   initialSlide.remove();
-  Logger.log("Created Cloud Next '27 Keynote Google Slides Deck: " + deck.getUrl());
+  Logger.log("Created Cloud Next '27 Google Slides Deck: " + deck.getUrl());
 }
