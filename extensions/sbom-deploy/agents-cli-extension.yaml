@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/agents-cli/main/schemas/agents-cli-extension-v1alpha1.schema.json
+schema: agents-cli-extension/v1alpha1
+name: sbom-deploy
+description: Scan the project SBOM and verify pre-deploy governance gates, then run the native agents-cli deploy.
+requires:
+  agents_cli: ">=1.5,<2"
+  on_incompatible: warn
+
+commands:
+  override:
+    deploy:
+      run: ["bash", "scripts/sbom_then_deploy.sh"]
+      description: SBOM scan via syft+grype & pre-deploy quality gate, then the built-in deploy.
+  add:
+    sbom-report:
+      run: ["bash", "scripts/sbom_report.sh"]
+      description: Produce an SBOM and dependency security audit for the current project (no deploy).

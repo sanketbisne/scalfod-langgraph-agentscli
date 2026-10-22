@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/agents-cli/main/schemas/agents-cli-extension-v1alpha1.schema.json
+schema: agents-cli-extension/v1alpha1
+name: langchain
+description: Run LangChain agents, LangGraph graphs, and Deep Agents through the agents-cli lifecycle.
+requires:
+  agents_cli: ">=1.5,<2"
+  on_incompatible: warn
+
+commands:
+  override:
+    playground:
+      run: ["uv", "run", "langgraph", "dev", "--no-browser", "--port", "8080"]
+      description: Start the local LangGraph dev server.
+    run:
+      run: ["uv", "run", "python", "scripts/run.py"]
+      description: Run the compiled agent graph with a single prompt.
+    eval.generate:
+      run: ["uv", "run", "python", "scripts/eval_generate.py"]
+      description: Generate evaluation traces by driving the LangGraph CompiledStateGraph.
+    eval.dataset:
+      run: ["uv", "run", "python", "scripts/unsupported.py", "eval", "dataset"]
+      description: Unsupported on LangChain (requires ADK user simulator).
+    eval.optimize:
+      run: ["uv", "run", "python", "scripts/unsupported.py", "eval", "optimize"]
+      description: Unsupported on LangChain (requires ADK agent introspection).
+    publish.gemini-enterprise:
+      run: ["uv", "run", "--with", "pyyaml", "python", "scripts/publish.py"]
+      description: Agent-Runtime-aware publish wrapper for LangChain projects.
+  add:
+    research-report:
+      run: ["uv", "run", "python", "scripts/generate_research_report.py"]
+      description: Run the DeepCite LangGraph agent and export a verified Markdown research report to reports/.

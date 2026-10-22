@@ -1,0 +1,8 @@
+metrics:
+  - response_quality
+  - factual_grounding
+  - safety_compliance
+thresholds:
+  response_quality: 0.80
+  factual_grounding: 0.80
+  safety_compliance: 1.00

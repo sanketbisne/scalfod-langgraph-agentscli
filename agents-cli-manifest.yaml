@@ -1,0 +1,6 @@
+name: scalfod-langgraph-agentscli
+agent: google/agents-cli/extensions/langchain/template@v1.8.0
+deployment_target: cloud_run
+region: us-central1
+session_type: in_memory
+agent_directory: app
