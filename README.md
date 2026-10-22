@@ -1,13 +1,30 @@
-# DeepCite: LangChain & LangGraph on Google Agents CLI (`scalfod-langgraph-agentscli`)
+# ⚡ DeepCite: Ship LangChain & LangGraph Agents on Google Cloud with Zero Lock-In (`agents-cli` Extension System)
 
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Agents_CLI_v1.8+-4285F4?logo=google-cloud&logoColor=white)](https://github.com/google/agents-cli)
 [![Framework](https://img.shields.io/badge/Framework-LangChain_%7C_LangGraph-1C3C3C?logo=chainlink&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Zero Lock-In](https://img.shields.io/badge/google--adk_Dependency-0%25_(Zero_Lock--In)-FF6B6B)](#)
 [![Protocol](https://img.shields.io/badge/Protocol-A2A_%7C_FastAPI-06B6D4)](https://google.github.io/A2A/)
 [![Extension System](https://img.shields.io/badge/Agents_CLI-Extension_System_v1alpha1-10B981)](https://developers.googleblog.com/powering-the-agent-development-lifecycle-with-any-framework-from-adk-to-langchain-and-beyond/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](#)
 
-> **Powering the Agent Development Lifecycle (ADLC) with any framework—from ADK to LangChain, LangGraph, and beyond.**  
-> This repository is a complete, production-ready reference project and live workshop demonstrating how to **scaffold, run, inspect, evaluate, govern, and deploy a pure LangChain / LangGraph agent** using the **Google Agents CLI (`agents-cli`) Extension System**—with **zero `google-adk` dependency**.
+> **🔥 Bring Your Own Agent Framework to Google Cloud.**  
+> **Zero `google-adk` lock-in. 100% of the production lifecycle.**  
+> Scaffold, debug in **LangGraph Studio**, grade with **Vertex AI Evals**, enforce **SBOM supply-chain gates**, and ship **A2A-native containers to Cloud Run**—all from a single unified `agents-cli` command surface.
+
+---
+
+## 💡 Why This Changes the Agent Engineering Game
+
+Until now, agent toolchains forced an impossible choice: adopt their opinionated framework or build your own CI/CD, evaluation harness, A2A server, and Cloud Run deployment pipelines from scratch.
+
+With the **Google Agents CLI Extension System (`v1.5+` / `v1.8+`)**, **only 6 commands** care about the agent runtime—and they are cleanly hot-swapped via a single [`agents-cli-extension.yaml`](file:///Users/sanketbisne/more-than-agents/scalfod-langgraph-agentscli/agents-cli-extension.yaml) file, while **18+ production commands** (`deploy`, `eval grade`, `eval compare`, `infra`, `lint`, `login`) work out of the box:
+
+| Approach | Framework Freedom | Native Vertex AI Evals & A2A | Custom Org Policy Gates (SBOM / SecOps) | Maintenance Tax |
+| :--- | :---: | :---: | :---: | :---: |
+| **Forking the CLI** | ✅ | ⚠️ Breaks on upstream releases | ✅ | ❌ High (permanent rebase tax) |
+| **Custom Bash Wrapper Scripts** | ✅ | ⚠️ Manual wiring | ❌ Bypassed by devs & coding agents | ❌ Medium-High |
+| **`agents-cli` Extension System (This Repo)** | **✅ Any Framework (LangGraph, Deep Agents)** | **✅ Built-in (`eval grade`, FastAPI A2A)** | **✅ Native `[↑ override]` + SHA Lockfile** | **✅ Zero (Upstream upgrades for free)** |
 
 ---
 
