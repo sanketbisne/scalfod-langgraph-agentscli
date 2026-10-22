@@ -3,306 +3,406 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Powering the Agent Development Lifecycle with LangChain, LangGraph, and Google Agents CLI</title>
+  <title>Google Cloud Next '27 Keynote | Agents CLI, LangChain &amp; LangGraph</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Roboto+Mono:wght@400;500&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Official Google Internal Font Family served via Google Fonts + Fallbacks -->
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Display:wght@400;500;700&family=Google+Sans+Mono:wght@400;500;600&family=Google+Sans+Text:wght@400;500;700&family=Google+Sans:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Google Sans Text', 'Google Sans', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
-    h1, h2, h3, .font-heading {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    .font-display {
+      font-family: 'Google Sans Display', 'Google Sans', 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.025em;
     }
-    code, pre, .font-mono-code {
-      font-family: 'Roboto Mono', monospace;
+    .font-sans-google {
+      font-family: 'Google Sans', 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.015em;
+    }
+    .font-mono-google {
+      font-family: 'Google Sans Mono', 'Roboto Mono', monospace;
+    }
+    .gemini-gradient-text {
+      background: linear-gradient(90deg, #4285F4 0%, #9B72CB 52%, #D96570 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .keynote-stage-dark {
+      background: radial-gradient(circle at 85% 15%, rgba(66, 133, 244, 0.16) 0%, rgba(155, 114, 203, 0.08) 35%, rgba(14, 16, 21, 1) 75%), #0E1015;
+      color: #F8F9FA;
+    }
+    .keynote-stage-light {
+      background: #FFFFFF;
+      color: #202124;
     }
   </style>
 </head>
-<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+<body class="bg-[var(--background)] text-[var(--foreground)] p-3 md:p-6">
   <div class="max-w-6xl mx-auto">
-    <!-- Top Control Bar -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 shadow-sm">
-      <div class="flex items-center gap-2.5">
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold text-white" style="background:#4285F4;">
-          Google Cloud Tech Session
+
+    <!-- Top Keynote Presenter Console Bar -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-[var(--card)] border border-[var(--border)] rounded-2xl px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1">
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#4285F4;"></span>
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#EA4335;"></span>
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#FBBC04;"></span>
+          <span class="w-2.5 h-2.5 rounded-full" style="background:#34A853;"></span>
+        </div>
+        <span class="text-xs font-mono-google uppercase tracking-wider px-2.5 py-0.5 rounded-full font-medium" style="background:#E8F0FE; color:#1967D2;">
+          Cloud Next '27 Keynote
         </span>
-        <span class="text-sm font-medium text-[var(--foreground)] font-heading">
-          Agents CLI v1.8+ &bull; LangChain &amp; LangGraph Deck
+        <span class="text-sm font-sans-google font-medium text-[var(--foreground)]">
+          Google Sans Display &bull; Google Sans Text &bull; Google Sans Mono
         </span>
       </div>
+
       <div class="flex items-center gap-2">
-        <button id="prevBtn" onclick="changeSlide(-1)" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium hover:opacity-80 transition">
+        <button onclick="changeSlide(-1)" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-sans-google font-medium hover:opacity-80 transition">
           &larr; Prev
         </button>
-        <span id="slideCounter" class="text-xs font-mono-code px-2.5 py-1 rounded bg-[var(--background)] border border-[var(--border)]">
-          Slide 1 / 10
+        <span id="slideCounter" class="text-xs font-mono-google px-3 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          01 / 10
         </span>
-        <button id="nextBtn" onclick="changeSlide(1)" class="px-3 py-1.5 rounded-lg text-white text-xs font-medium hover:opacity-90 transition" style="background:#4285F4;">
+        <button onclick="changeSlide(1)" class="px-3.5 py-1.5 rounded-lg text-white text-xs font-sans-google font-medium hover:opacity-90 transition" style="background:#1A73E8;">
           Next &rarr;
         </button>
-        <button onclick="toggleAllView()" id="viewToggleBtn" class="ml-2 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium hover:opacity-80 transition">
-          Show All 10 Slides
+        <button onclick="toggleTeleprompter()" id="notesBtn" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-sans-google font-medium hover:opacity-80 transition">
+          Hide Teleprompter
+        </button>
+        <button onclick="toggleAllView()" id="viewToggleBtn" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-sans-google font-medium hover:opacity-80 transition">
+          Grid / All 10
         </button>
       </div>
     </div>
 
-    <!-- Slide Dots Navigation -->
+    <!-- Slide Progress Pills -->
     <div id="dotsBar" class="flex items-center justify-center gap-1.5 mb-4"></div>
 
-    <!-- Slides Container (Google Cloud Developer Theme Cards: #FFFFFF / #F8F9FA / #202124) -->
-    <div id="slidesContainer" class="space-y-6">
+    <!-- =================================================================== -->
+    <!-- KEYNOTE SLIDES CONTAINER                                            -->
+    <!-- =================================================================== -->
+    <div id="slidesContainer" class="space-y-8">
 
-      <!-- SLIDE 1 -->
-      <section class="slide-item rounded-2xl overflow-hidden shadow-lg border border-gray-200" style="background:#FFFFFF; color:#202124;">
-        <div class="h-2 w-full flex">
+      <!-- ================================================================= -->
+      <!-- SLIDE 01: KEYNOTE HERO OPENING (Dark Stage Mode)                  -->
+      <!-- ================================================================= -->
+      <section class="slide-item rounded-3xl overflow-hidden shadow-2xl border border-gray-800 keynote-stage-dark" data-notes="Good morning everyone, and welcome to Google Cloud Next '27. Over the past year, we have seen developers move from building single-agent prototypes to running mission-critical agentic systems in production. And the #1 thing developers have asked us for is choice: the freedom to bring any framework, whether it is ADK, LangChain, or LangGraph, and run it on Google Cloud's production lifecycle with zero lock-in.">
+        <div class="h-1.5 w-full flex">
           <div class="w-1/4" style="background:#4285F4;"></div>
           <div class="w-1/4" style="background:#EA4335;"></div>
           <div class="w-1/4" style="background:#FBBC04;"></div>
           <div class="w-1/4" style="background:#34A853;"></div>
         </div>
-        <div class="p-8 md:p-12 flex flex-col justify-between min-h-[480px]" style="background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);">
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="px-3 py-1 rounded-full text-xs font-semibold text-white" style="background:#4285F4;">Google Cloud Next / Developer Session</span>
-              <span class="px-3 py-1 rounded-full text-xs font-mono-code font-medium" style="background:#E8F0FE; color:#1967D2;">agents-cli v1.8+</span>
+            <div class="flex items-center gap-3">
+              <span class="px-3.5 py-1 rounded-full text-xs font-sans-google font-medium border" style="background:rgba(66,133,244,0.14); border-color:rgba(138,180,248,0.35); color:#8AB4F8;">
+                Google Cloud Next '27 &bull; Opening Keynote
+              </span>
+              <span class="text-xs font-mono-google" style="color:#9AA0A6;">agents-cli v1.8+</span>
             </div>
-            <span class="text-xs font-mono-code" style="color:#5F6368;">SLIDE 01 / 10</span>
+            <span class="text-xs font-mono-google" style="color:#9AA0A6;">01 / 10</span>
           </div>
 
-          <div class="my-8 max-w-4xl">
-            <h1 class="text-3xl md:text-5xl font-bold tracking-tight leading-tight mb-5 font-heading" style="color:#202124;">
-              Powering the Agent Development Lifecycle with Any Framework
+          <div class="my-auto py-8 max-w-4xl">
+            <p class="text-sm md:text-base font-sans-google font-medium uppercase tracking-widest mb-4" style="color:#8AB4F8;">
+              The Open Agent Development Lifecycle
+            </p>
+            <h1 class="text-4xl md:text-6xl font-display font-bold leading-[1.08] mb-6 text-white">
+              Every agent framework.<br />
+              <span class="gemini-gradient-text">One production lifecycle.</span>
             </h1>
-            <p class="text-lg md:text-2xl font-normal leading-relaxed mb-6" style="color:#5F6368;">
-              Running LangChain, LangGraph, and Custom Governance Policies on Google Cloud with Agents CLI (v1.8+)
+            <p class="text-lg md:text-2xl font-normal leading-relaxed max-w-3xl" style="color:#BDC1C6;">
+              Running LangChain, LangGraph, and custom enterprise governance policies natively on Google Cloud with the Agents CLI Extension System.
             </p>
-            <div class="flex flex-wrap gap-3 pt-2">
-              <span class="px-3.5 py-1.5 rounded-lg text-xs font-mono-code font-medium border" style="background:#FFFFFF; border-color:#DADCE0; color:#202124;">Zero google-adk Dependency</span>
-              <span class="px-3.5 py-1.5 rounded-lg text-xs font-mono-code font-medium border" style="background:#FFFFFF; border-color:#DADCE0; color:#202124;">LangGraph CompiledStateGraph</span>
-              <span class="px-3.5 py-1.5 rounded-lg text-xs font-mono-code font-medium border" style="background:#FFFFFF; border-color:#DADCE0; color:#202124;">Vertex AI Evals + Cloud Run A2A</span>
-              <span class="px-3.5 py-1.5 rounded-lg text-xs font-mono-code font-medium border" style="background:#FFFFFF; border-color:#DADCE0; color:#202124;">SBOM Pre-Deploy Gate</span>
-            </div>
           </div>
 
-          <div class="pt-4 border-t flex flex-wrap items-center justify-between gap-4 text-xs" style="border-color:#DADCE0; color:#5F6368;">
-            <div class="font-mono-code font-medium" style="color:#1967D2;">
-              Live Repo: github.com/sanketbisne/scalfod-langgraph-agentscli
+          <div class="pt-6 border-t flex flex-wrap items-center justify-between gap-4 text-xs" style="border-color:rgba(255,255,255,0.12); color:#9AA0A6;">
+            <div class="flex items-center gap-3">
+              <span class="px-3 py-1 rounded-md font-mono-google text-white" style="background:#1F2430;">github.com/sanketbisne/scalfod-langgraph-agentscli</span>
             </div>
-            <div>Fonts: Plus Jakarta Sans &bull; Roboto &bull; Roboto Mono</div>
+            <div class="font-sans-google">Google Cloud AI &amp; Developer Platform</div>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 2 -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-200" style="background:#FFFFFF; color:#202124;">
+      <!-- ================================================================= -->
+      <!-- SLIDE 02: SUNDAR'S SIGNATURE BIG NUMBERS SLIDE (Dark Stage Mode)  -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-800 keynote-stage-dark" data-notes="When we looked inside Agents CLI, we realized something fundamental. Out of 24 commands that power the entire lifecycle from scaffolding to Cloud Run deployment and Vertex AI evaluations, only 6 commands actually touch the agent framework runtime. By making those 6 commands extensible, developers get 18 production commands for free with zero google-adk dependency.">
         <div class="h-1.5 w-full" style="background:#4285F4;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-sans-google font-medium uppercase tracking-widest" style="color:#8AB4F8;">By The Numbers</span>
+            <span class="text-xs font-mono-google" style="color:#9AA0A6;">02 / 10</span>
+          </div>
+
+          <div class="my-auto py-4">
+            <h2 class="text-3xl md:text-5xl font-display font-bold text-white mb-10">
+              Decoupling the lifecycle from the runtime.
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="p-7 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-5xl md:text-6xl font-display font-bold mb-3" style="color:#8AB4F8;">18+</div>
+                <div class="text-base font-sans-google font-bold text-white mb-2">Framework-Agnostic Commands</div>
+                <p class="text-xs leading-relaxed" style="color:#9AA0A6;">
+                  <code class="font-mono-google text-gray-300">deploy</code>, <code class="font-mono-google text-gray-300">eval grade</code>, <code class="font-mono-google text-gray-300">infra</code>, <code class="font-mono-google text-gray-300">lint</code>, and <code class="font-mono-google text-gray-300">login</code> work unchanged across ADK, LangChain, and LangGraph.
+                </p>
+              </div>
+
+              <div class="p-7 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-5xl md:text-6xl font-display font-bold mb-3" style="color:#81C995;">6</div>
+                <div class="text-base font-sans-google font-bold text-white mb-2">Runtime Overrides</div>
+                <p class="text-xs leading-relaxed" style="color:#9AA0A6;">
+                  <code class="font-mono-google text-gray-300">run</code>, <code class="font-mono-google text-gray-300">playground</code>, and <code class="font-mono-google text-gray-300">eval.generate</code> hot-swap via a single <code class="font-mono-google text-gray-300">agents-cli-extension.yaml</code> manifest.
+                </p>
+              </div>
+
+              <div class="p-7 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-5xl md:text-6xl font-display font-bold mb-3" style="color:#FDD663;">0%</div>
+                <div class="text-base font-sans-google font-bold text-white mb-2">Framework Lock-In</div>
+                <p class="text-xs leading-relaxed" style="color:#9AA0A6;">
+                  Zero <code class="font-mono-google text-gray-300">google-adk</code> dependency required in <code class="font-mono-google text-gray-300">pyproject.toml</code>. Pure LangChain &amp; LangGraph code in production.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t flex items-center justify-between text-xs" style="border-color:rgba(255,255,255,0.12); color:#9AA0A6;">
+            <span>Available starting in Agents CLI v1.5+ (Extension System) &amp; v1.8+ (LangChain Template)</span>
+            <span class="font-mono-google" style="color:#8AB4F8;">google/agents-cli</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- SLIDE 03: THE DEVELOPER DILEMMA (Clean Executive Light Mode)      -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-200 keynote-stage-light" data-notes="Before today, if your team built with LangGraph or had custom enterprise deployment policies like SBOM scanning, you had three bad choices: fork the CLI and pay a permanent maintenance tax, wrap it in bash scripts that developers and AI coding assistants bypass, or build everything from scratch. Extensions solve both problems with one mechanism.">
+        <div class="h-1.5 w-full" style="background:#1A73E8;"></div>
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#4285F4;">Architecture Motivation</span>
-              <span class="text-xs font-mono-code" style="color:#5F6368;">SLIDE 02 / 10</span>
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#1A73E8;">Why Extensions Matter</span>
+              <span class="text-xs font-mono-google" style="color:#5F6368;">03 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-2" style="color:#202124;">The Framework Lock-In Problem</h2>
-            <p class="text-sm md:text-base mb-6" style="color:#5F6368;">
-              Teams want Google Cloud deployment, Vertex AI evaluation, and A2A serving without being forced to rewrite LangChain or LangGraph agents in ADK.
+            <h2 class="text-3xl md:text-4xl font-display font-bold mb-3" style="color:#202124;">
+              Ending the tradeoff between velocity and choice.
+            </h2>
+            <p class="text-base mb-8" style="color:#5F6368;">
+              How teams previously adapted opinionated agent toolchains vs. the Agents CLI Extension System:
             </p>
 
-            <div class="overflow-x-auto rounded-xl border" style="border-color:#DADCE0;">
-              <table class="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr style="background:#F8F9FA; border-bottom:1px solid #DADCE0;">
-                    <th class="p-3.5 font-heading font-bold" style="color:#202124;">Dimension</th>
-                    <th class="p-3.5 font-heading font-bold" style="color:#EA4335;">Option 1: Forking the CLI</th>
-                    <th class="p-3.5 font-heading font-bold" style="color:#B06000;">Option 2: Custom Bash Wrappers</th>
-                    <th class="p-3.5 font-heading font-bold" style="background:#E8F0FE; color:#1967D2;">Option 3: Agents CLI Extensions (v1.8+)</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y" style="border-color:#DADCE0;">
-                  <tr>
-                    <td class="p-3.5 font-medium">Framework Support</td>
-                    <td class="p-3.5" style="color:#5F6368;">Custom fork per framework</td>
-                    <td class="p-3.5" style="color:#5F6368;">Parallel script surface</td>
-                    <td class="p-3.5 font-medium" style="background:#F8FAFF; color:#202124;">LangChain, LangGraph, Deep Agents, ADK</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3.5 font-medium">Upstream CLI Upgrades</td>
-                    <td class="p-3.5" style="color:#EA4335;">Breaks on upstream releases; manual rebase tax</td>
-                    <td class="p-3.5" style="color:#5F6368;">Wrapper flags drift from native CLI</td>
-                    <td class="p-3.5 font-medium" style="background:#F8FAFF; color:#34A853;">18+ native commands upgrade automatically</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3.5 font-medium">Developer &amp; Coding Agent UX</td>
-                    <td class="p-3.5" style="color:#5F6368;">Requires installing internal fork</td>
-                    <td class="p-3.5" style="color:#EA4335;">Developers &amp; AI assistants bypass scripts</td>
-                    <td class="p-3.5 font-medium" style="background:#F8FAFF; color:#202124;">Same `agents-cli` commands with `[↑ ext]` tags</td>
-                  </tr>
-                  <tr>
-                    <td class="p-3.5 font-medium">Enterprise Governance (SBOM / SSO)</td>
-                    <td class="p-3.5" style="color:#5F6368;">Hardcoded in fork</td>
-                    <td class="p-3.5" style="color:#5F6368;">Unenforced if CLI is called directly</td>
-                    <td class="p-3.5 font-medium" style="background:#F8FAFF; color:#34A853;">Intercepts `deploy` in-place + SHA lockfile</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div class="p-6 rounded-2xl border" style="background:#F8F9FA; border-color:#DADCE0;">
+                <div class="inline-block px-2.5 py-1 rounded text-xs font-sans-google font-bold mb-3" style="background:#FCE8E6; color:#C5221F;">
+                  Legacy Path 1
+                </div>
+                <h3 class="text-lg font-sans-google font-bold mb-2" style="color:#202124;">Forking the CLI</h3>
+                <p class="text-xs leading-relaxed mb-4" style="color:#5F6368;">
+                  Maintain a divergent internal copy and manually rebase on every upstream release.
+                </p>
+                <div class="text-xs font-mono-google pt-3 border-t" style="border-color:#DADCE0; color:#C5221F;">
+                  Result: Permanent maintenance tax
+                </div>
+              </div>
+
+              <div class="p-6 rounded-2xl border" style="background:#F8F9FA; border-color:#DADCE0;">
+                <div class="inline-block px-2.5 py-1 rounded text-xs font-sans-google font-bold mb-3" style="background:#FEF7E0; color:#B06000;">
+                  Legacy Path 2
+                </div>
+                <h3 class="text-lg font-sans-google font-bold mb-2" style="color:#202124;">Custom Wrapper Scripts</h3>
+                <p class="text-xs leading-relaxed mb-4" style="color:#5F6368;">
+                  Build parallel shell scripts around the CLI. Developers and coding agents call the native CLI directly and bypass policies.
+                </p>
+                <div class="text-xs font-mono-google pt-3 border-t" style="border-color:#DADCE0; color:#B06000;">
+                  Result: Bypassed governance gates
+                </div>
+              </div>
+
+              <div class="p-6 rounded-2xl border-2 shadow-sm" style="background:#E8F0FE; border-color:#1A73E8;">
+                <div class="inline-block px-2.5 py-1 rounded text-xs font-sans-google font-bold text-white mb-3" style="background:#1A73E8;">
+                  Cloud Next '27 Standard
+                </div>
+                <h3 class="text-lg font-sans-google font-bold mb-2" style="color:#202124;">Agents CLI Extensions</h3>
+                <p class="text-xs leading-relaxed mb-4" style="color:#3C4043;">
+                  Declarative <code class="font-mono-google">agents-cli-extension.yaml</code> overrides commands in-place, pinned by Git commit SHA.
+                </p>
+                <div class="text-xs font-mono-google font-bold pt-3 border-t" style="border-color:#AECBFA; color:#137333;">
+                  Result: Zero fork + 100% enforcement
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="mt-6 p-4 rounded-xl flex items-center justify-between text-xs" style="background:#F8F9FA; border:1px solid #DADCE0;">
-            <span><strong style="color:#202124;">Key Takeaway:</strong> Adapt <code class="font-mono-code">agents-cli</code> to your framework and security policies via <code class="font-mono-code">agents-cli-extension.yaml</code> without forking.</span>
-            <span class="font-mono-code font-medium" style="color:#4285F4;">Schema: agents-cli-extension/v1alpha1</span>
+          <div class="pt-4 border-t flex items-center justify-between text-xs" style="border-color:#DADCE0; color:#5F6368;">
+            <span>Distributed directly via Git repositories with zero external registry required</span>
+            <span class="font-mono-google">schema: agents-cli-extension/v1alpha1</span>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 3 -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-200" style="background:#FFFFFF; color:#202124;">
+      <!-- ================================================================= -->
+      <!-- SLIDE 04: PLATFORM ARCHITECTURE LAYER CAKE (Light Mode)           -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-200 keynote-stage-light" data-notes="Here is how the stack fits together. At the top, you bring any agent framework: LangChain, LangGraph, Deep Agents, or ADK. In the middle, the Agents CLI Extension Layer maps the 6 runtime commands while passing the 18 lifecycle commands straight through to Google Cloud Run, Vertex AI Evaluation Service, and Cloud Trace.">
         <div class="h-1.5 w-full" style="background:#34A853;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#34A853;">Command Surface Architecture</span>
-              <span class="text-xs font-mono-code" style="color:#5F6368;">SLIDE 03 / 10</span>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#137333;">Platform Architecture</span>
+              <span class="text-xs font-mono-google" style="color:#5F6368;">04 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-2" style="color:#202124;">Inside the Agents CLI Command Surface (6 vs. 18 Split)</h2>
-            <p class="text-sm md:text-base mb-6" style="color:#5F6368;">
-              A single <code class="font-mono-code">agents-cli-extension.yaml</code> swaps only the 6 runtime-coupled commands and keeps the 18 production commands intact.
-            </p>
+            <h2 class="text-3xl md:text-4xl font-display font-bold mb-6" style="color:#202124;">
+              One unified command surface across the stack.
+            </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Left Box: 6 Framework-Coupled Commands -->
-              <div class="rounded-xl p-5 border-2" style="border-color:#4285F4; background:#F8FAFF;">
-                <div class="flex items-center justify-between mb-3">
-                  <span class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#4285F4;">6 Framework-Coupled Commands</span>
-                  <span class="text-xs font-mono-code font-medium" style="color:#1967D2;">[↑ langchain] override</span>
+            <div class="space-y-3.5">
+              <!-- Layer 1: Frameworks -->
+              <div class="p-4 rounded-2xl border" style="background:#F8F9FA; border-color:#DADCE0;">
+                <div class="text-xs font-sans-google font-bold uppercase tracking-wider mb-2.5" style="color:#5F6368;">
+                  1. Agent Authoring Layer (Bring Your Own Framework)
                 </div>
-                <p class="text-xs mb-4" style="color:#5F6368;">Intercepted by the LangChain extension to drive the LangGraph <code class="font-mono-code">CompiledStateGraph</code>:</p>
-                <ul class="space-y-2 text-xs font-mono-code">
-                  <li class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>run</strong> &rarr; <code>uv run python scripts/run.py</code></li>
-                  <li class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>playground</strong> &rarr; <code>uv run langgraph dev --port 8080</code></li>
-                  <li class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>eval.generate</strong> &rarr; <code>uv run python scripts/eval_generate.py</code></li>
-                  <li class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>publish.gemini-enterprise</strong> &rarr; <code>scripts/publish.py</code></li>
-                  <li class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>eval.dataset / eval.optimize</strong> &rarr; Clean refusal wrapper</li>
-                </ul>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                  <div class="p-3 rounded-xl font-sans-google font-bold text-xs border-2" style="background:#E8F0FE; border-color:#1A73E8; color:#1967D2;">LangChain 1.0+</div>
+                  <div class="p-3 rounded-xl font-sans-google font-bold text-xs border-2" style="background:#E8F0FE; border-color:#1A73E8; color:#1967D2;">LangGraph StateGraph</div>
+                  <div class="p-3 rounded-xl font-sans-google font-bold text-xs border" style="background:#FFFFFF; border-color:#DADCE0; color:#202124;">Deep Agents</div>
+                  <div class="p-3 rounded-xl font-sans-google font-bold text-xs border" style="background:#FFFFFF; border-color:#DADCE0; color:#202124;">Google ADK (Python / Go)</div>
+                </div>
               </div>
 
-              <!-- Right Box: 18+ Framework-Agnostic Commands -->
-              <div class="rounded-xl p-5 border-2" style="border-color:#34A853; background:#F6FEF8;">
-                <div class="flex items-center justify-between mb-3">
-                  <span class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#34A853;">18+ Framework-Agnostic Commands</span>
-                  <span class="text-xs font-mono-code font-medium" style="color:#137333;">Native Built-In</span>
+              <!-- Layer 2: Extension Dispatcher -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div class="p-4 rounded-2xl border-2" style="background:#F8FAFF; border-color:#4285F4;">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-sans-google font-bold" style="color:#1967D2;">6 Overridden Runtime Commands</span>
+                    <span class="px-2 py-0.5 rounded text-xs font-mono-google font-medium" style="background:#E8F0FE; color:#1967D2;">[↑ langchain]</span>
+                  </div>
+                  <div class="text-xs font-mono-google" style="color:#3C4043;">
+                    run &bull; playground (LangGraph Studio) &bull; eval.generate &bull; publish.gemini-enterprise &bull; eval.dataset &bull; eval.optimize
+                  </div>
                 </div>
-                <p class="text-xs mb-4" style="color:#5F6368;">Operate on standard contracts (FastAPI, Dockerfile, Terraform, EvaluationDataset):</p>
-                <div class="grid grid-cols-2 gap-2 text-xs font-mono-code">
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>deploy</strong> (Cloud Run / GKE)</div>
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>eval grade</strong> (Vertex AI)</div>
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>eval compare</strong></div>
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>eval analyze</strong></div>
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>infra</strong> (Terraform)</div>
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>scaffold create / enhance</strong></div>
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>extension add / list</strong></div>
-                  <div class="p-2 rounded bg-white border" style="border-color:#DADCE0;"><strong>install / info / lint / login</strong></div>
+
+                <div class="p-4 rounded-2xl border-2" style="background:#F6FEF8; border-color:#34A853;">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-sans-google font-bold" style="color:#137333;">18+ Native Production Commands</span>
+                    <span class="px-2 py-0.5 rounded text-xs font-mono-google font-medium" style="background:#E6F4EA; color:#137333;">Built-In</span>
+                  </div>
+                  <div class="text-xs font-mono-google" style="color:#3C4043;">
+                    deploy &bull; eval grade &bull; eval compare &bull; infra (Terraform) &bull; scaffold &bull; extension &bull; install &bull; lint
+                  </div>
+                </div>
+              </div>
+
+              <!-- Layer 3: Google Cloud Runtime -->
+              <div class="p-4 rounded-2xl text-white" style="background:#202124;">
+                <div class="text-xs font-sans-google font-bold uppercase tracking-wider mb-2" style="color:#8AB4F8;">
+                  3. Google Cloud Production Foundation
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono-google text-center">
+                  <div class="p-2.5 rounded-lg" style="background:#2D3136;">Cloud Run (FastAPI A2A)</div>
+                  <div class="p-2.5 rounded-lg" style="background:#2D3136;">Vertex AI Eval Service</div>
+                  <div class="p-2.5 rounded-lg" style="background:#2D3136;">Gemini on Vertex AI</div>
+                  <div class="p-2.5 rounded-lg" style="background:#2D3136;">Cloud Trace &amp; Logging</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="mt-6 p-3.5 rounded-xl text-xs flex items-center justify-between" style="background:#F8F9FA; border:1px solid #DADCE0;">
-            <span><strong>Scope Precedence:</strong> Project scope (<code class="font-mono-code">./agents-cli-extension.yaml</code>) overrides User scope (<code class="font-mono-code">--global</code>).</span>
-            <span class="font-mono-code" style="color:#5F6368;">Inspect active sources via: agents-cli info</span>
+          <div class="pt-4 border-t flex items-center justify-between text-xs" style="border-color:#DADCE0; color:#5F6368;">
+            <span>Same Dockerfile CMD &amp; FastAPI A2A contract across every framework</span>
+            <span class="font-mono-google">app.fast_api_app:app</span>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 4 (Dark Terminal Slide) -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-700" style="background:#202124; color:#FFFFFF;">
+      <!-- ================================================================= -->
+      <!-- SLIDE 05: LIVE DEMO ACT I - SCAFFOLDING (Dark Stage Spotlight)    -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-800 keynote-stage-dark" data-notes="Let's look at how fast it is to get started. In a single command, we point agents-cli create at the first-party LangChain template. It scaffolds the project and auto-loads the project-scope extension. And when we grep for google-adk across the entire project, it returns zero matches.">
         <div class="h-1.5 w-full" style="background:#4285F4;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#8AB4F8;">Act 1 &bull; Project Initialization</span>
-              <span class="text-xs font-mono-code" style="color:#9AA0A6;">SLIDE 04 / 10</span>
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#8AB4F8;">Live Demo &bull; Act 1</span>
+              <span class="text-xs font-mono-google" style="color:#9AA0A6;">05 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-2 text-white">Act 1: Scaffolding a Pure LangChain / LangGraph Project</h2>
-            <p class="text-sm md:text-base mb-6" style="color:#BDC1C6;">
-              Point <code class="font-mono-code text-blue-300">agents-cli create</code> directly at the first-party LangChain template tag. Scaffolding and extension installation happen in one step.
+            <h2 class="text-3xl md:text-4xl font-display font-bold text-white mb-2">
+              Scaffold a pure LangGraph project in one command.
+            </h2>
+            <p class="text-base mb-6" style="color:#BDC1C6;">
+              Scaffolding and extension installation happen together. Nothing needs to be installed globally.
             </p>
 
-            <div class="rounded-xl p-5 border font-mono-code text-xs md:text-sm leading-relaxed overflow-x-auto" style="background:#171717; border-color:#3C4043; color:#E8EAED;">
-<pre class="whitespace-pre-wrap"><span style="color:#8AB4F8;"># 1. Scaffold from the first-party LangChain extension template</span>
+            <div class="rounded-2xl p-6 border font-mono-google text-xs md:text-sm leading-relaxed overflow-x-auto" style="background:#131314; border-color:#3C4043; color:#E8EAED;">
+<pre class="whitespace-pre-wrap"><span style="color:#8AB4F8;"># 1. Scaffold directly from the first-party LangChain template</span>
 $ agents-cli create scalfod-langgraph-agentscli \
     --agent google/agents-cli/extensions/langchain/template@v1.8.0 \
     -d cloud_run
 
-$ cd scalfod-langgraph-agentscli && agents-cli install
+$ cd scalfod-langgraph-agentscli &amp;&amp; agents-cli install
 <span style="color:#81C995;">Agents CLI v1.8.0
 Fetching remote template: google/agents-cli/extensions/langchain/template@v1.8.0
 &gt; Verifying GCP credentials...
-&gt; ✓ Connected to project: your-gcp-project
+&gt; ✓ Connected to project: your-project
 ✓ Success! Your agent project is ready.</span>
 
-<span style="color:#8AB4F8;"># 2. Verify zero google-adk dependency in pyproject.toml and app/</span>
+<span style="color:#8AB4F8;"># 2. Prove zero google-adk dependency in pyproject.toml and app/</span>
 $ grep -r "google.adk\|google-adk" pyproject.toml app/
 $ echo "exit: $?"
 <span style="color:#FDD663;">exit: 1</span></pre>
             </div>
           </div>
 
-          <div class="mt-6 flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl" style="background:#292A2D; border:1px solid #3C4043;">
-            <div class="flex items-center gap-2.5">
-              <span class="px-3 py-1 rounded-md text-xs font-bold text-black" style="background:#34A853;">VERIFIED</span>
-              <span class="text-xs text-gray-200">Zero <code class="font-mono-code">google-adk</code> dependency in <code class="font-mono-code">pyproject.toml</code> or <code class="font-mono-code">app/</code>. Pure <code class="font-mono-code">langchain</code> + <code class="font-mono-code">langgraph</code> + <code class="font-mono-code">langchain-google-genai</code>.</span>
-            </div>
+          <div class="pt-4 border-t flex flex-wrap items-center justify-between gap-2 text-xs" style="border-color:rgba(255,255,255,0.12); color:#9AA0A6;">
+            <span>Auto-loaded via <code class="font-mono-google text-white">./agents-cli-extension.yaml</code> at project root</span>
+            <span class="px-2.5 py-1 rounded font-mono-google text-black font-bold" style="background:#81C995;">Zero ADK Dependency Verified</span>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 5 -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-200" style="background:#FFFFFF; color:#202124;">
+      <!-- ================================================================= -->
+      <!-- SLIDE 06: UNIFIED LANGGRAPH STATE GRAPH (Light Mode)              -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-200 keynote-stage-light" data-notes="Inside app/agent.py, we define our agent using LangChain 1.0's create_agent helper, which compiles directly into a LangGraph CompiledStateGraph. Whether you write a LangChain agent, a custom LangGraph StateGraph, or a Deep Agent, they all compile to the same underlying graph contract.">
         <div class="h-1.5 w-full" style="background:#FBBC04;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#B06000;">Codebase Tour</span>
-              <span class="text-xs font-mono-code" style="color:#5F6368;">SLIDE 05 / 10</span>
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#B06000;">Codebase Architecture</span>
+              <span class="text-xs font-mono-google" style="color:#5F6368;">06 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-4" style="color:#202124;">Project Structure &amp; LangGraph State Graph</h2>
+            <h2 class="text-3xl md:text-4xl font-display font-bold mb-5" style="color:#202124;">
+              One graph representation: <code class="font-mono-google text-2xl md:text-3xl" style="color:#1A73E8;">CompiledStateGraph</code>
+            </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <!-- Left: Directory Tree -->
-              <div class="rounded-xl p-4 font-mono-code text-xs leading-relaxed" style="background:#202124; color:#E8EAED;">
-                <div class="text-xs font-bold mb-2" style="color:#8AB4F8;">scalfod-langgraph-agentscli/</div>
-<pre class="whitespace-pre-wrap">├── <span style="color:#FDD663;">agents-cli-extension.yaml</span>  # Project overrides
+              <div class="rounded-2xl p-5 font-mono-google text-xs leading-relaxed" style="background:#131314; color:#E8EAED;">
+                <div class="text-xs font-bold mb-2" style="color:#8AB4F8;">Project Tree</div>
+<pre class="whitespace-pre-wrap">scalfod-langgraph-agentscli/
+├── <span style="color:#FDD663;">agents-cli-extension.yaml</span>  # Project overrides
 ├── agents-cli-manifest.yaml   # Target: cloud_run
 ├── <span style="color:#FDD663;">langgraph.json</span>             # LangGraph Studio config
-├── pyproject.toml             # Zero google-adk
+├── pyproject.toml             # langchain + langgraph
 ├── Dockerfile                 # FastAPI A2A on :8080
 ├── app/
 │   ├── <span style="color:#81C995;">agent.py</span>               # root_agent: CompiledStateGraph
-│   ├── <span style="color:#81C995;">tools.py</span>               # Plan, Search, Critique tools
+│   ├── <span style="color:#81C995;">tools.py</span>               # DeepCite research tools
 │   ├── fast_api_app.py        # FastAPI A2A server
 │   └── app_utils/a2a.py       # /.well-known/agent.json
-├── scripts/
-│   ├── run.py                 # Override: agents-cli run
-│   ├── eval_generate.py       # Override: eval generate
-│   └── generate_research_report.py
 └── extensions/sbom-deploy/    # Custom SBOM deploy gate</pre>
               </div>
 
-              <!-- Right: app/agent.py snippet -->
-              <div class="rounded-xl p-4 font-mono-code text-xs leading-relaxed" style="background:#202124; color:#E8EAED;">
+              <div class="rounded-2xl p-5 font-mono-google text-xs leading-relaxed" style="background:#131314; color:#E8EAED;">
                 <div class="text-xs font-bold mb-2" style="color:#81C995;">app/agent.py</div>
 <pre class="whitespace-pre-wrap">from langchain.agents import create_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph.state import CompiledStateGraph
-from app.tools import (
-    create_research_plan,
-    search_curated_kb,
-    search_arxiv_papers,
-    search_wikipedia_summary,
-    critique_research_draft,
-)
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash", temperature=0
@@ -323,167 +423,142 @@ root_agent: CompiledStateGraph = create_agent(
             </div>
           </div>
 
-          <div class="mt-5 p-3.5 rounded-xl text-xs" style="background:#F8F9FA; border:1px solid #DADCE0; color:#5F6368;">
-            <strong style="color:#202124;">Unified Graph Representation:</strong> In LangChain 1.0+, <code class="font-mono-code">create_agent</code> compiles to a LangGraph <code class="font-mono-code">CompiledStateGraph</code>, allowing LangChain agents, LangGraph workflows, and Deep Agents to share the exact same runtime contract.
+          <div class="pt-4 border-t flex items-center justify-between text-xs" style="border-color:#DADCE0; color:#5F6368;">
+            <span>Authenticates automatically via Application Default Credentials (ADC) on Vertex AI</span>
+            <span class="font-mono-google">GOOGLE_GENAI_USE_VERTEXAI=True</span>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 6 -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-200" style="background:#FFFFFF; color:#202124;">
-        <div class="h-1.5 w-full" style="background:#4285F4;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+      <!-- ================================================================= -->
+      <!-- SLIDE 07: DEEPCITE RESEARCH & CRITIQUE GRAPH (Light Mode)         -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-200 keynote-stage-light" data-notes="To demonstrate a real-world workload, we built DeepCite: an iterative research and self-critique agent. Rather than doing a single-pass search, DeepCite plans sub-questions, searches a curated knowledge base along with ArXiv and Wikipedia, runs a critique tool to verify citation density, and synthesizes a verified Markdown report.">
+        <div class="h-1.5 w-full" style="background:#1A73E8;"></div>
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#4285F4;">Agent Workflow Design</span>
-              <span class="text-xs font-mono-code" style="color:#5F6368;">SLIDE 06 / 10</span>
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#1A73E8;">DeepCite Reference Workload</span>
+              <span class="text-xs font-mono-google" style="color:#5F6368;">07 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-2" style="color:#202124;">DeepCite Agent Architecture (Plan &rarr; Search &rarr; Critique &rarr; Report)</h2>
-            <p class="text-sm md:text-base mb-6" style="color:#5F6368;">
-              Tool-driven self-reflection loop that enforces multi-source retrieval and citation verification before final synthesis.
+            <h2 class="text-3xl md:text-4xl font-display font-bold mb-2" style="color:#202124;">
+              Iterative Research &amp; Self-Critique Loop
+            </h2>
+            <p class="text-base mb-8" style="color:#5F6368;">
+              Grounded retrieval and mandatory citation verification before generating the final technical report:
             </p>
 
-            <!-- 4-Stage Horizontal Flow -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div class="p-4 rounded-xl border-t-4" style="background:#F8F9FA; border-color:#4285F4; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
-                <div class="text-xs font-bold mb-1" style="color:#4285F4;">STAGE 1: PLAN</div>
-                <div class="font-mono-code text-xs font-bold mb-2" style="color:#202124;">create_research_plan</div>
+              <div class="p-5 rounded-2xl border-t-4" style="background:#F8F9FA; border-top-color:#4285F4; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
+                <div class="text-xs font-sans-google font-bold uppercase mb-1" style="color:#1A73E8;">01 &bull; Plan</div>
+                <div class="text-xs font-mono-google font-bold mb-2" style="color:#202124;">create_research_plan</div>
                 <p class="text-xs leading-relaxed" style="color:#5F6368;">
-                  Decomposes the user prompt into 3 targeted sub-questions and recommends domain search queries.
+                  Decomposes complex prompts into structured sub-questions and targeted search queries.
                 </p>
               </div>
 
-              <div class="p-4 rounded-xl border-t-4" style="background:#F8F9FA; border-color:#FBBC04; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
-                <div class="text-xs font-bold mb-1" style="color:#B06000;">STAGE 2: SEARCH</div>
-                <div class="font-mono-code text-xs font-bold mb-2" style="color:#202124;">search_curated_kb / arxiv / wiki</div>
+              <div class="p-5 rounded-2xl border-t-4" style="background:#F8F9FA; border-top-color:#FBBC04; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
+                <div class="text-xs font-sans-google font-bold uppercase mb-1" style="color:#B06000;">02 &bull; Search</div>
+                <div class="text-xs font-mono-google font-bold mb-2" style="color:#202124;">search_curated_kb / arxiv</div>
                 <p class="text-xs leading-relaxed" style="color:#5F6368;">
-                  Retrieves grounded passages with explicit IDs (<code class="font-mono-code">[KB-...]</code>, <code class="font-mono-code">[ARXIV-...]</code>, <code class="font-mono-code">[WIKI-...]</code>) and offline fallbacks.
+                  Retrieves evidence with explicit IDs (<code class="font-mono-google">[KB-...]</code>, <code class="font-mono-google">[ARXIV-...]</code>, <code class="font-mono-google">[WIKI-...]</code>).
                 </p>
               </div>
 
-              <div class="p-4 rounded-xl border-t-4" style="background:#F8F9FA; border-color:#EA4335; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
-                <div class="text-xs font-bold mb-1" style="color:#EA4335;">STAGE 3: CRITIQUE</div>
-                <div class="font-mono-code text-xs font-bold mb-2" style="color:#202124;">critique_research_draft</div>
+              <div class="p-5 rounded-2xl border-t-4" style="background:#F8F9FA; border-top-color:#EA4335; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
+                <div class="text-xs font-sans-google font-bold uppercase mb-1" style="color:#C5221F;">03 &bull; Critique</div>
+                <div class="text-xs font-mono-google font-bold mb-2" style="color:#202124;">critique_research_draft</div>
                 <p class="text-xs leading-relaxed" style="color:#5F6368;">
-                  Audits draft claims against retrieved source IDs. Requires &ge; 2 distinct citations and technical depth or triggers revision.
+                  Audits draft claims for &ge; 2 distinct citations and depth; triggers revision if incomplete.
                 </p>
               </div>
 
-              <div class="p-4 rounded-xl border-t-4" style="background:#F8F9FA; border-color:#34A853; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
-                <div class="text-xs font-bold mb-1" style="color:#34A853;">STAGE 4: REPORT</div>
-                <div class="font-mono-code text-xs font-bold mb-2" style="color:#202124;">Cited Markdown Output</div>
+              <div class="p-5 rounded-2xl border-t-4" style="background:#F8F9FA; border-top-color:#34A853; border-left:1px solid #DADCE0; border-right:1px solid #DADCE0; border-bottom:1px solid #DADCE0;">
+                <div class="text-xs font-sans-google font-bold uppercase mb-1" style="color:#137333;">04 &bull; Report</div>
+                <div class="text-xs font-mono-google font-bold mb-2" style="color:#202124;">research-report CLI</div>
                 <p class="text-xs leading-relaxed" style="color:#5F6368;">
-                  Synthesizes the final Markdown brief with inline <code class="font-mono-code">[SOURCE_ID]</code> tags and a verified <code class="font-mono-code">## References</code> bibliography.
+                  Outputs Markdown with inline <code class="font-mono-google">[SOURCE_ID]</code> citations and a verified <code class="font-mono-google">## References</code> section.
                 </p>
               </div>
             </div>
           </div>
 
-          <div class="mt-6 p-4 rounded-xl text-xs flex flex-wrap items-center justify-between gap-2" style="background:#E8F0FE; color:#1967D2;">
-            <span><strong>Deterministic Evaluation Ready:</strong> Built-in curated KB and ArXiv/Wikipedia fallbacks guarantee 100% reproducible CI evaluation runs without flaky external API timeouts.</span>
+          <div class="pt-4 border-t flex items-center justify-between text-xs" style="border-color:#DADCE0; color:#5F6368;">
+            <span>Deterministic offline fallbacks guarantee reproducible runs in CI/CD and sandboxed environments</span>
+            <span class="font-mono-google" style="color:#1A73E8;">app/tools.py</span>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 7 (Dark Terminal Slide) -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-700" style="background:#202124; color:#FFFFFF;">
+      <!-- ================================================================= -->
+      <!-- SLIDE 08: STUDIO & VERTEX AI EVALS (Dark Stage Spotlight)         -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-800 keynote-stage-dark" data-notes="When you run agents-cli playground, the extension launches LangGraph Studio on port 8080 instead of the ADK web UI. And for evaluations, eval generate runs the LangGraph graph to produce standard traces, which native agents-cli eval grade then scores using the Vertex AI Evaluation Service.">
         <div class="h-1.5 w-full" style="background:#34A853;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#81C995;">Act 2 &bull; Local Execution &amp; Studio</span>
-              <span class="text-xs font-mono-code" style="color:#9AA0A6;">SLIDE 07 / 10</span>
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#81C995;">Live Demo &bull; Act 2 &amp; Act 3</span>
+              <span class="text-xs font-mono-google" style="color:#9AA0A6;">08 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-2 text-white">Running Locally &amp; Visual Debugging in LangGraph Studio</h2>
-            <p class="text-sm md:text-base mb-5" style="color:#BDC1C6;">
-              The <code class="font-mono-code text-green-300">[↑ langchain]</code> suffix in <code class="font-mono-code">--help</code> and <code class="font-mono-code">info</code> shows exactly which commands are intercepted.
-            </p>
+            <h2 class="text-3xl md:text-4xl font-display font-bold text-white mb-5">
+              LangGraph Studio &amp; Vertex AI Evaluations.
+            </h2>
 
-            <div class="rounded-xl p-5 border font-mono-code text-xs leading-relaxed overflow-x-auto" style="background:#171717; border-color:#3C4043; color:#E8EAED;">
-<pre class="whitespace-pre-wrap"><span style="color:#8AB4F8;"># 1. Inspect overridden commands in CLI help</span>
-$ agents-cli --help | grep -E "playground|run|research-report"
-  playground       Start the local LangGraph dev server.  <span style="color:#81C995;">[↑ langchain]</span>
-  run              Run the compiled agent graph with a single prompt.  <span style="color:#81C995;">[↑ langchain]</span>
-  research-report  Run the DeepCite LangGraph agent and export Markdown report.  <span style="color:#81C995;">[↑ langchain]</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div class="rounded-2xl p-5 border font-mono-google text-xs leading-relaxed" style="background:#131314; border-color:#3C4043; color:#E8EAED;">
+                <div class="font-sans-google font-bold text-xs uppercase mb-2" style="color:#8AB4F8;">1. Run &amp; Inspect in LangGraph Studio</div>
+<pre class="whitespace-pre-wrap">$ agents-cli --help | grep -E "playground|run "
+  playground  Start LangGraph server. <span style="color:#81C995;">[↑ langchain]</span>
+  run         Run compiled graph.     <span style="color:#81C995;">[↑ langchain]</span>
 
-<span style="color:#8AB4F8;"># 2. Inspect exact command vectors in agents-cli info</span>
-$ agents-cli info
-<span style="color:#BDC1C6;">Extensions (experimental):
-  playground (override, project) &lt;- langchain: uv run langgraph dev --no-browser --port 8080
-  run        (override, project) &lt;- langchain: uv run python scripts/run.py</span>
+$ agents-cli run "How do Agents CLI extensions work?"
+<span style="color:#FDD663;">WARNING:root:agents-cli: applying 6 extension command(s)</span>
 
-<span style="color:#8AB4F8;"># 3. Execute single-turn research prompt or launch LangGraph Studio</span>
-$ agents-cli run "How does the Google Agents CLI Extension System work?"
-$ agents-cli playground   <span style="color:#FDD663;"># Boots LangGraph Studio on http://localhost:8080</span></pre>
+$ agents-cli playground
+<span style="color:#81C995;">&gt; Boots LangGraph Studio on http://localhost:8080</span></pre>
+              </div>
+
+              <div class="rounded-2xl p-5 border font-mono-google text-xs leading-relaxed" style="background:#131314; border-color:#3C4043; color:#E8EAED;">
+                <div class="font-sans-google font-bold text-xs uppercase mb-2" style="color:#81C995;">2. Overridden Generate + Native Grade</div>
+<pre class="whitespace-pre-wrap"><span style="color:#8AB4F8;"># Overridden: Drives LangGraph CompiledStateGraph</span>
+$ agents-cli eval generate \
+    --dataset tests/eval/datasets/basic-dataset.json \
+    -o tests/eval/output/
+
+<span style="color:#81C995;"># Native: Scores traces via Vertex AI Eval Service</span>
+$ agents-cli eval grade \
+    --traces tests/eval/output/basic-dataset.json \
+    --config tests/eval/eval_config.yaml</pre>
+              </div>
             </div>
           </div>
 
-          <div class="mt-5 p-3.5 rounded-xl text-xs flex items-center justify-between" style="background:#292A2D; border:1px solid #3C4043; color:#BDC1C6;">
-            <span><strong>Transparency by Design:</strong> Every invocation logs <code class="font-mono-code text-yellow-300">WARNING:root:agents-cli: applying 6 extension command(s)</code> so overrides are never hidden.</span>
+          <div class="pt-4 border-t flex items-center justify-between text-xs" style="border-color:rgba(255,255,255,0.12); color:#9AA0A6;">
+            <span>Unsupported ADK-simulator commands (<code class="font-mono-google text-gray-300">eval dataset</code>) exit cleanly with an explanation</span>
+            <span class="font-mono-google" style="color:#81C995;">Standard EvaluationDataset Schema</span>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 8 -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-200" style="background:#FFFFFF; color:#202124;">
-        <div class="h-1.5 w-full" style="background:#4285F4;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#4285F4;">Act 3 &bull; Evaluation Pipeline</span>
-              <span class="text-xs font-mono-code" style="color:#5F6368;">SLIDE 08 / 10</span>
-            </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-2" style="color:#202124;">Framework-Agnostic Evaluations (<code class="font-mono-code">eval generate</code> + <code class="font-mono-code">eval grade</code>)</h2>
-            <p class="text-sm md:text-base mb-5" style="color:#5F6368;">
-              Trace generation is overridden to run the LangGraph graph; grading and comparison use the native Vertex AI Evaluation Service.
-            </p>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div class="p-4 rounded-xl border" style="background:#F8FAFF; border-color:#4285F4;">
-                <div class="text-xs font-bold mb-1" style="color:#1967D2;">STEP 1: GENERATE TRACES [↑ langchain]</div>
-                <p class="text-xs mb-3" style="color:#5F6368;">Drives <code class="font-mono-code">root_agent.invoke()</code> across <code class="font-mono-code">basic-dataset.json</code> and records tool trajectories:</p>
-                <pre class="p-3 rounded text-xs font-mono-code overflow-x-auto" style="background:#202124; color:#E8EAED;">agents-cli eval generate \
-  --dataset tests/eval/datasets/basic-dataset.json \
-  -o tests/eval/output/</pre>
-              </div>
-
-              <div class="p-4 rounded-xl border" style="background:#F6FEF8; border-color:#34A853;">
-                <div class="text-xs font-bold mb-1" style="color:#137333;">STEP 2: GRADE &amp; COMPARE (Native CLI)</div>
-                <p class="text-xs mb-3" style="color:#5F6368;">Scores standard <code class="font-mono-code">EvaluationDataset</code> traces against Vertex AI rubrics:</p>
-                <pre class="p-3 rounded text-xs font-mono-code overflow-x-auto" style="background:#202124; color:#E8EAED;">agents-cli eval grade \
-  --traces tests/eval/output/basic-dataset.json \
-  --config tests/eval/eval_config.yaml</pre>
-              </div>
-            </div>
-
-            <div class="p-4 rounded-xl border" style="background:#FEF7E0; border-color:#FBBC04;">
-              <div class="text-xs font-bold mb-1" style="color:#B06000;">CLEAN REFUSAL FOR ADK-ONLY SUBCOMMANDS</div>
-              <pre class="text-xs font-mono-code overflow-x-auto" style="color:#202124;">$ agents-cli eval dataset synthesize
-agents-cli eval dataset is not supported by the langchain extension:
-it runs the agent through ADK's user simulator, which needs google-adk in this project's venv.</pre>
-            </div>
-          </div>
-
-          <div class="mt-4 text-xs" style="color:#5F6368;">
-            Explicit refusals prevent coding agents and CI pipelines from retrying unsupported commands in a loop.
-          </div>
-        </div>
-      </section>
-
-      <!-- SLIDE 9 (Dark Terminal Slide) -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-700" style="background:#202124; color:#FFFFFF;">
+      <!-- ================================================================= -->
+      <!-- SLIDE 09: CUSTOM ENTERPRISE GOVERNANCE EXTENSION (Dark Mode)      -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-800 keynote-stage-dark" data-notes="Platform teams can use this exact same mechanism to enforce security and compliance policies across every project. Here, our sbom-deploy extension intercepts agents-cli deploy, runs a Syft and Grype SBOM scan, and then calls native agents-cli deploy. Because the loader sets AGENTS_CLI_DISABLE_OVERRIDES=1 automatically, it delegates cleanly without infinite recursion.">
         <div class="h-1.5 w-full" style="background:#EA4335;"></div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+        <div class="p-8 md:p-14 min-h-[520px] flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#F28B82;">Act 4 &bull; Custom Governance Extensions</span>
-              <span class="text-xs font-mono-code" style="color:#9AA0A6;">SLIDE 09 / 10</span>
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#F28B82;">Live Demo &bull; Act 4</span>
+              <span class="text-xs font-mono-google" style="color:#9AA0A6;">09 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-3 text-white">Authoring Custom Enterprise Extensions (<code class="font-mono-code">sbom-deploy</code> &amp; <code class="font-mono-code">research-report</code>)</h2>
+            <h2 class="text-3xl md:text-4xl font-display font-bold text-white mb-5">
+              Policy-as-Code: Custom <code class="font-mono-google text-2xl md:text-3xl" style="color:#F28B82;">sbom-deploy</code> Gate
+            </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="rounded-xl p-4 border font-mono-code text-xs leading-relaxed" style="background:#171717; border-color:#3C4043; color:#E8EAED;">
-                <div class="font-bold mb-2" style="color:#FDD663;">extensions/sbom-deploy/agents-cli-extension.yaml</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div class="rounded-2xl p-5 border font-mono-google text-xs leading-relaxed" style="background:#131314; border-color:#3C4043; color:#E8EAED;">
+                <div class="font-sans-google font-bold text-xs uppercase mb-2" style="color:#FDD663;">agents-cli-extension.yaml</div>
 <pre class="whitespace-pre-wrap">schema: agents-cli-extension/v1alpha1
 name: sbom-deploy
 description: Scan project SBOM, then run native deploy.
@@ -495,15 +570,13 @@ commands:
   override:
     deploy:
       run: ["bash", "scripts/sbom_then_deploy.sh"]
-      description: SBOM scan via syft+grype, then deploy.
   add:
     sbom-report:
-      run: ["bash", "scripts/sbom_report.sh"]
-      description: Produce an SBOM audit (no deploy).</pre>
+      run: ["bash", "scripts/sbom_report.sh"]</pre>
               </div>
 
-              <div class="rounded-xl p-4 border font-mono-code text-xs leading-relaxed" style="background:#171717; border-color:#3C4043; color:#E8EAED;">
-                <div class="font-bold mb-2" style="color:#81C995;">scripts/sbom_then_deploy.sh</div>
+              <div class="rounded-2xl p-5 border font-mono-google text-xs leading-relaxed" style="background:#131314; border-color:#3C4043; color:#E8EAED;">
+                <div class="font-sans-google font-bold text-xs uppercase mb-2" style="color:#81C995;">scripts/sbom_then_deploy.sh</div>
 <pre class="whitespace-pre-wrap">#!/usr/bin/env bash
 set -euo pipefail
 
@@ -513,99 +586,128 @@ syft dir:. -o cyclonedx-json &gt; /tmp/sbom.cdx.json
 echo "[sbom-deploy] Scanning for critical CVEs..."
 grype sbom:/tmp/sbom.cdx.json --fail-on critical
 
-<span style="color:#8AB4F8;"># AGENTS_CLI_DISABLE_OVERRIDES=1 is set by loader
-# Calls built-in deploy with zero recursion!</span>
-echo "[sbom-deploy] SBOM clean; running native deploy..."
+<span style="color:#8AB4F8;"># Loader sets AGENTS_CLI_DISABLE_OVERRIDES=1
+# Delegates to built-in deploy with zero recursion!</span>
 exec agents-cli deploy "$@"</pre>
               </div>
             </div>
           </div>
 
-          <div class="mt-5 p-3.5 rounded-xl text-xs font-mono-code flex flex-wrap items-center justify-between gap-2" style="background:#292A2D; border:1px solid #3C4043; color:#E8EAED;">
+          <div class="pt-4 border-t flex flex-wrap items-center justify-between gap-2 text-xs font-mono-google" style="border-color:rgba(255,255,255,0.12); color:#BDC1C6;">
             <span>$ agents-cli extension add local@./extensions/sbom-deploy --yes</span>
-            <span style="color:#81C995;">$ agents-cli deploy --dry-run</span>
+            <span style="color:#81C995;">AGENTS_CLI_DISABLE_OVERRIDES=1</span>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 10 -->
-      <section class="slide-item hidden rounded-2xl overflow-hidden shadow-lg border border-gray-200" style="background:#FFFFFF; color:#202124;">
-        <div class="h-2 w-full flex">
+      <!-- ================================================================= -->
+      <!-- SLIDE 10: SUNDAR'S SIGNATURE CLOSING BENTO GRID (Dark Stage Mode) -->
+      <!-- ================================================================= -->
+      <section class="slide-item hidden rounded-3xl overflow-hidden shadow-2xl border border-gray-800 keynote-stage-dark" data-notes="To wrap up: with the Agents CLI Extension System, you get complete framework freedom with LangChain and LangGraph, visual debugging with LangGraph Studio, enterprise evaluations with Vertex AI, A2A Cloud Run deployment, custom SBOM governance gates, and cryptographic SHA lockfile discipline. Everything we showed today is live in our open-source repository. Thank you.">
+        <div class="h-1.5 w-full flex">
           <div class="w-1/4" style="background:#4285F4;"></div>
           <div class="w-1/4" style="background:#EA4335;"></div>
           <div class="w-1/4" style="background:#FBBC04;"></div>
           <div class="w-1/4" style="background:#34A853;"></div>
         </div>
-        <div class="p-8 md:p-10 min-h-[480px] flex flex-col justify-between">
+        <div class="p-8 md:p-12 min-h-[520px] flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider" style="color:#34A853;">Supply-Chain Discipline &amp; Summary</span>
-              <span class="text-xs font-mono-code" style="color:#5F6368;">SLIDE 10 / 10</span>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-sans-google font-bold uppercase tracking-widest" style="color:#8AB4F8;">Google Cloud Next '27 Summary</span>
+              <span class="text-xs font-mono-google" style="color:#9AA0A6;">10 / 10</span>
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold font-heading mb-6" style="color:#202124;">Supply-Chain Pinning &amp; Live Demo Wrap-Up</h2>
+            <h2 class="text-2xl md:text-4xl font-display font-bold text-white mb-5">
+              The Open Agent Development Lifecycle
+            </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div class="p-5 rounded-xl border" style="background:#F8F9FA; border-color:#DADCE0;">
-                <div class="text-xs font-bold uppercase mb-2" style="color:#4285F4;">1. Exact SHA Lockfile</div>
-                <p class="text-xs leading-relaxed mb-3" style="color:#5F6368;">
-                  <code class="font-mono-code">extension add</code> resolves Git tags/branches to an exact commit SHA in <code class="font-mono-code">agents-cli-extensions.yaml</code>.
-                </p>
-                <div class="text-xs font-mono-code p-2 rounded bg-white border" style="border-color:#DADCE0;">sha: a1b2c3d4...</div>
+            <!-- Signature Google Keynote Bento Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-5">
+              <div class="p-4 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-xs font-mono-google uppercase mb-1" style="color:#8AB4F8;">01 &bull; Open Frameworks</div>
+                <div class="text-base font-display font-bold text-white mb-1">LangChain &amp; LangGraph</div>
+                <p class="text-xs" style="color:#9AA0A6;">First-party template with zero <code class="font-mono-google">google-adk</code> dependency and unified <code class="font-mono-google">CompiledStateGraph</code>.</p>
               </div>
 
-              <div class="p-5 rounded-xl border" style="background:#F8F9FA; border-color:#DADCE0;">
-                <div class="text-xs font-bold uppercase mb-2" style="color:#34A853;">2. Bit-for-Bit CI Restore</div>
-                <p class="text-xs leading-relaxed mb-3" style="color:#5F6368;">
-                  <code class="font-mono-code">agents-cli install</code> re-materializes the exact reviewed extension code without advancing the pin.
-                </p>
-                <div class="text-xs font-mono-code p-2 rounded bg-white border" style="border-color:#DADCE0;">agents-cli install</div>
+              <div class="p-4 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-xs font-mono-google uppercase mb-1" style="color:#81C995;">02 &bull; Local Developer Experience</div>
+                <div class="text-base font-display font-bold text-white mb-1">LangGraph Studio</div>
+                <p class="text-xs" style="color:#9AA0A6;"><code class="font-mono-google">agents-cli playground</code> boots LangGraph dev server on port 8080 for visual graph inspection.</p>
               </div>
 
-              <div class="p-5 rounded-xl border" style="background:#F8F9FA; border-color:#DADCE0;">
-                <div class="text-xs font-bold uppercase mb-2" style="color:#B06000;">3. Unified Cloud Run A2A</div>
-                <p class="text-xs leading-relaxed mb-3" style="color:#5F6368;">
-                  Serves the exact same FastAPI + A2A container contract (<code class="font-mono-code">app.fast_api_app:app</code>) as any ADK agent.
-                </p>
-                <div class="text-xs font-mono-code p-2 rounded bg-white border" style="border-color:#DADCE0;">agents-cli deploy</div>
+              <div class="p-4 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-xs font-mono-google uppercase mb-1" style="color:#FDD663;">03 &bull; Quality Flywheel</div>
+                <div class="text-base font-display font-bold text-white mb-1">Vertex AI Evaluations</div>
+                <p class="text-xs" style="color:#9AA0A6;">Overridden <code class="font-mono-google">eval generate</code> pairs seamlessly with native <code class="font-mono-google">eval grade</code> and <code class="font-mono-google">eval compare</code>.</p>
+              </div>
+
+              <div class="p-4 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-xs font-mono-google uppercase mb-1" style="color:#F28B82;">04 &bull; Enterprise Governance</div>
+                <div class="text-base font-display font-bold text-white mb-1">SBOM Pre-Deploy Gates</div>
+                <p class="text-xs" style="color:#9AA0A6;">Wrap <code class="font-mono-google">deploy</code> with Syft + Grype checks and delegate safely via <code class="font-mono-google">AGENTS_CLI_DISABLE_OVERRIDES=1</code>.</p>
+              </div>
+
+              <div class="p-4 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-xs font-mono-google uppercase mb-1" style="color:#8AB4F8;">05 &bull; Supply-Chain Security</div>
+                <div class="text-base font-display font-bold text-white mb-1">SHA Lockfile Discipline</div>
+                <p class="text-xs" style="color:#9AA0A6;">Pinned commit SHAs in <code class="font-mono-google">agents-cli-extensions.yaml</code> ensure bit-for-bit reproducible CI builds.</p>
+              </div>
+
+              <div class="p-4 rounded-2xl border" style="background:#161922; border-color:#2D3343;">
+                <div class="text-xs font-mono-google uppercase mb-1" style="color:#81C995;">06 &bull; Serverless Production</div>
+                <div class="text-base font-display font-bold text-white mb-1">Cloud Run + A2A Protocol</div>
+                <p class="text-xs" style="color:#9AA0A6;">Exposes <code class="font-mono-google">/.well-known/agent.json</code> and <code class="font-mono-google">/a2a/tasks/send</code> over FastAPI.</p>
               </div>
             </div>
 
-            <div class="p-5 rounded-xl border-2 flex flex-wrap items-center justify-between gap-4" style="background:#E8F0FE; border-color:#4285F4;">
+            <div class="p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4" style="background:rgba(66,133,244,0.12); border-color:rgba(138,180,248,0.4);">
               <div>
-                <div class="text-xs font-bold uppercase mb-1" style="color:#1967D2;">Clone &amp; Run the Complete Workshop</div>
-                <div class="text-base md:text-lg font-mono-code font-bold" style="color:#202124;">
+                <div class="text-xs font-sans-google font-bold uppercase" style="color:#8AB4F8;">Get Started Today</div>
+                <div class="text-sm md:text-lg font-mono-google font-bold text-white">
                   https://github.com/sanketbisne/scalfod-langgraph-agentscli
                 </div>
               </div>
-              <div class="font-mono-code text-xs px-3 py-2 rounded-lg text-white" style="background:#202124;">
+              <div class="px-3.5 py-2 rounded-xl font-mono-google text-xs text-white" style="background:#1A73E8;">
                 uvx google-agents-cli setup
               </div>
             </div>
-          </div>
-
-          <div class="pt-4 border-t flex items-center justify-between text-xs" style="border-color:#DADCE0; color:#5F6368;">
-            <span>Use Left / Right arrow keys to navigate slides</span>
-            <span>Google Cloud &bull; Agents CLI v1.8+</span>
           </div>
         </div>
       </section>
 
     </div>
+
+    <!-- =================================================================== -->
+    <!-- KEYNOTE SPEAKER TELEPROMPTER BAR (SUNDAR PICHAI STAGE SCRIPT)       -->
+    <!-- =================================================================== -->
+    <div id="teleprompterBox" class="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-xs font-sans-google font-bold uppercase tracking-wider" style="color:#4285F4;">
+          Keynote Stage Teleprompter (Speaker Script)
+        </span>
+        <span class="text-xs font-mono-google text-[var(--muted-foreground)]">Press Left / Right arrows to change slides</span>
+      </div>
+      <p id="teleprompterText" class="text-sm leading-relaxed text-[var(--foreground)]"></p>
+    </div>
+
   </div>
 
   <script>
     let currentSlide = 0;
     let showAll = false;
+    let showNotes = true;
     const slides = document.querySelectorAll('.slide-item');
     const counter = document.getElementById('slideCounter');
     const dotsBar = document.getElementById('dotsBar');
     const viewToggleBtn = document.getElementById('viewToggleBtn');
+    const notesBtn = document.getElementById('notesBtn');
+    const teleprompterBox = document.getElementById('teleprompterBox');
+    const teleprompterText = document.getElementById('teleprompterText');
 
     function renderDots() {
       dotsBar.innerHTML = '';
       slides.forEach((_, idx) => {
         const btn = document.createElement('button');
-        btn.className = 'h-2.5 rounded-full transition-all ' + (idx === currentSlide ? 'w-8' : 'w-2.5 opacity-40');
+        btn.className = 'h-2 rounded-full transition-all ' + (idx === currentSlide ? 'w-8' : 'w-2 opacity-40');
         btn.style.background = idx === currentSlide ? '#4285F4' : '#5F6368';
         btn.onclick = () => goToSlide(idx);
         dotsBar.appendChild(btn);
@@ -615,16 +717,19 @@ exec agents-cli deploy "$@"</pre>
     function updateSlideView() {
       if (showAll) {
         slides.forEach(s => s.classList.remove('hidden'));
-        counter.textContent = 'All 10 Slides';
+        counter.textContent = 'ALL 10';
         dotsBar.classList.add('hidden');
-        viewToggleBtn.textContent = 'Single Slide View';
+        teleprompterBox.classList.add('hidden');
+        viewToggleBtn.textContent = 'Single Slide';
       } else {
         slides.forEach((s, idx) => {
           s.classList.toggle('hidden', idx !== currentSlide);
         });
-        counter.textContent = `Slide ${currentSlide + 1} / ${slides.length}`;
+        counter.textContent = `${String(currentSlide + 1).padStart(2, '0')} / ${slides.length}`;
         dotsBar.classList.remove('hidden');
-        viewToggleBtn.textContent = 'Show All 10 Slides';
+        teleprompterBox.classList.toggle('hidden', !showNotes);
+        teleprompterText.textContent = slides[currentSlide].getAttribute('data-notes') || '';
+        viewToggleBtn.textContent = 'Grid / All 10';
         renderDots();
       }
     }
@@ -643,6 +748,12 @@ exec agents-cli deploy "$@"</pre>
 
     function toggleAllView() {
       showAll = !showAll;
+      updateSlideView();
+    }
+
+    function toggleTeleprompter() {
+      showNotes = !showNotes;
+      notesBtn.textContent = showNotes ? 'Hide Teleprompter' : 'Show Teleprompter';
       updateSlideView();
     }
 
