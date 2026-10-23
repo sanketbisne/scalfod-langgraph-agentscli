@@ -5,10 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Google Cloud Next '27 | Agents CLI, LangChain &amp; LangGraph</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Display:wght@400;500;700&family=Google+Sans+Mono:wght@400;500;600&family=Google+Sans+Text:wght@400;500;700&family=Google+Sans:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --background: #F8F9FA;
+      --foreground: #202124;
+      --card: #FFFFFF;
+      --border: #DADCE0;
+      --muted-foreground: #5F6368;
+    }
+    .hidden {
+      display: none !important;
+    }
     body {
       font-family: 'Google Sans Text', 'Google Sans', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-font-smoothing: antialiased;
@@ -182,7 +193,7 @@
   <div class="max-w-6xl mx-auto">
 
     <!-- Top Presenter Console Bar -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-[var(--card)] border border-[var(--border)] rounded-2xl px-4 py-3 shadow-sm">
+    <div id="topPresenterBar" class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-[var(--card)] border border-[var(--border)] rounded-2xl px-4 py-3 shadow-sm">
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-1.5">
           <span class="w-2.5 h-2.5 rounded-full animate-pulse" style="background:#4285F4;"></span>
@@ -217,6 +228,9 @@
         <button onclick="toggleTeleprompter()" id="notesBtn" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-sans-google font-medium hover:opacity-80 transition">
           Hide Script
         </button>
+        <button onclick="toggleSlideOnly()" id="slideOnlyBtn" class="px-3.5 py-1.5 rounded-lg text-white text-xs font-sans-google font-bold hover:opacity-90 transition" style="background:#202124;">
+          &#x26F6; Slide Only (Hide Top Bar)
+        </button>
         <button onclick="toggleAllView()" id="viewToggleBtn" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-sans-google font-medium hover:opacity-80 transition">
           Grid / All 10
         </button>
@@ -225,6 +239,11 @@
         </button>
       </div>
     </div>
+
+    <!-- Floating Restore Controls Pill when in Slide-Only Mode -->
+    <button id="restoreControlsBtn" onclick="toggleSlideOnly()" class="hidden fixed bottom-4 right-4 z-50 px-3.5 py-1.5 rounded-full text-xs font-sans-google font-medium text-white shadow-lg opacity-40 hover:opacity-100 transition" style="background:rgba(32,33,36,0.85); border:1px solid rgba(255,255,255,0.2);">
+      Show Top Bar (Press H)
+    </button>
 
     <!-- Animated Slide Progress Bar -->
     <div id="dotsBar" class="flex items-center justify-center gap-1.5 mb-4"></div>
@@ -845,9 +864,12 @@ exec agents-cli deploy "$@"<span class="cursor-blink"></span></pre>
   <script>
     let currentSlide = 0;
     let showAll = false;
-    let showNotes = true;
+    let showNotes = false;
+    let slideOnly = false;
     let autoPlayInterval = null;
     const slides = document.querySelectorAll('.slide-item');
+    const topPresenterBar = document.getElementById('topPresenterBar');
+    const restoreControlsBtn = document.getElementById('restoreControlsBtn');
     const counter = document.getElementById('slideCounter');
     const dotsBar = document.getElementById('dotsBar');
     const viewToggleBtn = document.getElementById('viewToggleBtn');
@@ -896,35 +918,50 @@ exec agents-cli deploy "$@"<span class="cursor-blink"></span></pre>
     }
 
     function updateSlideView() {
+      topPresenterBar.classList.toggle('hidden', slideOnly);
+      topPresenterBar.style.display = slideOnly ? 'none' : '';
+      restoreControlsBtn.classList.toggle('hidden', !slideOnly);
+      restoreControlsBtn.style.display = slideOnly ? '' : 'none';
+      notesBtn.textContent = showNotes ? 'Hide Script' : 'Show Script';
+
       if (showAll) {
         slides.forEach(s => {
           s.classList.remove('hidden');
+          s.style.display = '';
           s.classList.add('slide-active');
         });
         counter.textContent = 'ALL 10';
         dotsBar.classList.add('hidden');
+        dotsBar.style.display = 'none';
         teleprompterBox.classList.add('hidden');
+        teleprompterBox.style.display = 'none';
         viewToggleBtn.textContent = 'Single Slide';
       } else {
         slides.forEach((s, idx) => {
           if (idx === currentSlide) {
             s.classList.remove('hidden');
+            s.style.display = '';
             s.classList.remove('slide-active');
             void s.offsetWidth;
             s.classList.add('slide-active');
             animateNumbers(s);
           } else {
             s.classList.add('hidden');
+            s.style.display = 'none';
             s.classList.remove('slide-active');
           }
         });
         counter.textContent = `${String(currentSlide + 1).padStart(2, '0')} / ${slides.length}`;
-        dotsBar.classList.remove('hidden');
-        teleprompterBox.classList.toggle('hidden', !showNotes);
+        dotsBar.classList.toggle('hidden', slideOnly);
+        dotsBar.style.display = slideOnly ? 'none' : '';
+        const hideNotes = !showNotes || slideOnly;
+        teleprompterBox.classList.toggle('hidden', hideNotes);
+        teleprompterBox.style.display = hideNotes ? 'none' : '';
         teleprompterText.textContent = slides[currentSlide].getAttribute('data-notes') || '';
         viewToggleBtn.textContent = 'Grid / All 10';
         renderDots();
       }
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
 
     function changeSlide(delta) {
@@ -946,7 +983,12 @@ exec agents-cli deploy "$@"<span class="cursor-blink"></span></pre>
 
     function toggleTeleprompter() {
       showNotes = !showNotes;
-      notesBtn.textContent = showNotes ? 'Hide Script' : 'Show Script';
+      updateSlideView();
+    }
+
+    function toggleSlideOnly() {
+      slideOnly = !slideOnly;
+      if (slideOnly) showAll = false;
       updateSlideView();
     }
 
@@ -962,7 +1004,12 @@ exec agents-cli deploy "$@"<span class="cursor-blink"></span></pre>
     }
 
     function downloadAnimatedDeck() {
+      const prevShowAll = showAll;
+      showAll = false;
+      updateSlideView();
       const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      showAll = prevShowAll;
+      updateSlideView();
       const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -975,8 +1022,21 @@ exec agents-cli deploy "$@"<span class="cursor-blink"></span></pre>
     }
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight') changeSlide(1);
-      if (e.key === 'ArrowLeft') changeSlide(-1);
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        changeSlide(1);
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        changeSlide(-1);
+      }
+      if (e.key === 'h' || e.key === 'H' || e.key === 'f' || e.key === 'F') {
+        toggleSlideOnly();
+      }
+      if (e.key === 'Escape' && slideOnly) {
+        slideOnly = false;
+        updateSlideView();
+      }
     });
 
     updateSlideView();
