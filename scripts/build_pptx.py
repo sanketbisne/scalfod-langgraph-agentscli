@@ -236,6 +236,46 @@ class SlideBuilder:
 
     def to_xml(self) -> str:
         shapes_xml = "\n".join(self.shapes)
+        anim_nodes: list[str] = []
+        ctn_id = 3
+        for idx, shape_id in enumerate(range(6, self._id)):
+            delay_ms = idx * 180
+            c1 = ctn_id
+            c2 = ctn_id + 1
+            c3 = ctn_id + 2
+            c4 = ctn_id + 3
+            ctn_id += 4
+            anim_nodes.append(
+                f"""              <p:par>
+                <p:cTn id="{c1}" fill="hold">
+                  <p:stCondLst><p:cond delay="{delay_ms}"/></p:stCondLst>
+                  <p:childTnLst>
+                    <p:par>
+                      <p:cTn id="{c2}" presetID="10" presetClass="entr" presetSubtype="0" fill="hold" nodeType="withEffect">
+                        <p:stCondLst><p:cond delay="0"/></p:stCondLst>
+                        <p:childTnLst>
+                          <p:set>
+                            <p:cBhvr>
+                              <p:cTn id="{c3}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>
+                              <p:tgtEl><p:spTgt spid="{shape_id}"/></p:tgtEl>
+                              <p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst>
+                            </p:cBhvr>
+                            <p:to><p:strVal val="visible"/></p:to>
+                          </p:set>
+                          <p:animEffect transition="in" filter="fade">
+                            <p:cBhvr>
+                              <p:cTn id="{c4}" dur="450"/>
+                              <p:tgtEl><p:spTgt spid="{shape_id}"/></p:tgtEl>
+                            </p:cBhvr>
+                          </p:animEffect>
+                        </p:childTnLst>
+                      </p:cTn>
+                    </p:par>
+                  </p:childTnLst>
+                </p:cTn>
+              </p:par>"""
+            )
+        anim_xml = "\n".join(anim_nodes)
         return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -266,6 +306,25 @@ class SlideBuilder:
   </p:cSld>
   <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
   <p:transition spd="med"><p:fade/></p:transition>
+  <p:timing>
+    <p:tnLst>
+      <p:par>
+        <p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot">
+          <p:childTnLst>
+            <p:seq concurrent="1" nextAc="seek">
+              <p:cTn id="2" dur="indefinite" nodeType="mainSeq">
+                <p:childTnLst>
+{anim_xml}
+                </p:childTnLst>
+              </p:cTn>
+              <p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>
+              <p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst>
+            </p:seq>
+          </p:childTnLst>
+        </p:cTn>
+      </p:par>
+    </p:tnLst>
+  </p:timing>
 </p:sld>"""
 
 

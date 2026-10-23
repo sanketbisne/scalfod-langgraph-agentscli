@@ -220,6 +220,9 @@
         <button onclick="toggleAllView()" id="viewToggleBtn" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-sans-google font-medium hover:opacity-80 transition">
           Grid / All 10
         </button>
+        <button onclick="downloadAnimatedDeck()" class="px-3.5 py-1.5 rounded-lg text-white text-xs font-sans-google font-bold hover:opacity-90 transition" style="background:#34A853;">
+          &#x2B07; Download Animated Deck
+        </button>
       </div>
     </div>
 
@@ -956,6 +959,19 @@ exec agents-cli deploy "$@"<span class="cursor-blink"></span></pre>
         autoPlayBtn.textContent = '\u23F8 Pause';
         autoPlayInterval = setInterval(() => changeSlide(1), 5000);
       }
+    }
+
+    function downloadAnimatedDeck() {
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Cloud_Next_27_Animated_Deck.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     document.addEventListener('keydown', (e) => {
