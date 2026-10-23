@@ -1,503 +1,373 @@
 /**
- * Google Cloud Next '27 Deck Generator
- * Uses internal Google typography: Google Sans Display, Google Sans, Google Sans Text, Google Sans Mono
+ * 1-to-1 High-Fidelity Google Cloud Next '27 Deck Generator for Google Slides
+ * Matches the HTML presentation deck layout, colors, badges, giant numbers,
+ * 3-Layer Stack Cake (Slide 4), 4-Stage top-bordered cards (Slide 7),
+ * syntax-highlighted terminal colors, and Bento Grid + CTA bar (Slide 10).
  *
- * HOW TO GENERATE IN GOOGLE SLIDES:
- * 1. Go to https://script.google.com -> "New Project"
- * 2. Paste this entire file into Code.gs
- * 3. Select `createCloudNext27Deck` and click "Run"
- * 4. Open the generated Google Slides URL logged in the Execution Log!
+ * HOW TO RUN IN GOOGLE SLIDES:
+ * 1. Open https://slides.google.com -> Blank Presentation
+ * 2. Click Extensions -> Apps Script
+ * 3. Paste this file into Code.gs and click "Run" on `createCloudNext27Deck`
  */
 
 function createCloudNext27Deck() {
-  var deck = SlidesApp.create(
-    "Google Cloud Next '27 | Open Agent Development Lifecycle (Agents CLI v1.8+)"
-  );
+  var deck = SlidesApp.getActivePresentation();
+  if (!deck) {
+    deck = SlidesApp.create(
+      "Google Cloud Next '27 | Open Agent Development Lifecycle (Agents CLI v1.8+)"
+    );
+  }
 
-  // Official Google Typographic Trio
   var FONT_DISPLAY = "Google Sans Display";
   var FONT_HEADING = "Google Sans";
   var FONT_BODY = "Google Sans Text";
   var FONT_MONO = "Google Sans Mono";
 
-  // Google Cloud Next '27 Palette
-  var STAGE_DARK = "#0E1015";
-  var CARD_DARK = "#161922";
-  var CODE_DARK = "#131314";
-  var BORDER_DARK = "#2D3343";
-  var STAGE_LIGHT = "#FFFFFF";
-  var CARD_LIGHT = "#F8F9FA";
-  var BORDER_LIGHT = "#DADCE0";
+  var existingSlides = deck.getSlides();
 
-  var GOOGLE_BLUE = "#4285F4";
-  var GOOGLE_BLUE_LIGHT = "#8AB4F8";
-  var GOOGLE_RED = "#EA4335";
-  var GOOGLE_RED_LIGHT = "#F28B82";
-  var GOOGLE_YELLOW = "#FBBC04";
-  var GOOGLE_YELLOW_LIGHT = "#FDD663";
-  var GOOGLE_GREEN = "#34A853";
-  var GOOGLE_GREEN_LIGHT = "#81C995";
+  function addRect(slide, x, y, w, h, fillHex, borderHex, borderW, isRound) {
+    var shapeType = isRound ? SlidesApp.ShapeType.ROUND_RECTANGLE : SlidesApp.ShapeType.RECTANGLE;
+    var s = slide.insertShape(shapeType, x, y, w, h);
+    if (fillHex) {
+      s.getFill().setSolidFill(fillHex);
+    } else {
+      s.getFill().setTransparent();
+    }
+    if (borderHex) {
+      s.getBorder().setWeight(borderW || 1).getLineFill().setSolidFill(borderHex);
+    } else {
+      s.getBorder().setTransparent();
+    }
+    return s;
+  }
 
-  var TEXT_WHITE = "#FFFFFF";
-  var TEXT_MUTED_DARK = "#9AA0A6";
-  var TEXT_PRIMARY_LIGHT = "#202124";
-  var TEXT_MUTED_LIGHT = "#5F6368";
+  function addStyledBox(slide, x, y, w, h, fillHex, borderHex, borderW, isRound, lines) {
+    var s = addRect(slide, x, y, w, h, fillHex, borderHex, borderW, isRound);
+    s.setContentAlignment(SlidesApp.ContentAlignment.TOP);
+    var fullStr = lines.map(function(l) { return l.text; }).join("\n");
+    if (!fullStr) return s;
 
-  var initialSlide = deck.getSlides()[0];
+    var tr = s.getText();
+    tr.setText(fullStr);
+    var pos = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var item = lines[i];
+      var len = item.text.length;
+      if (len > 0) {
+        var sub = tr.getRange(pos, pos + len);
+        sub.getTextStyle()
+          .setFontFamily(item.font || FONT_BODY)
+          .setFontSize(item.size || 10)
+          .setForegroundColor(item.color || "#FFFFFF")
+          .setBold(!!item.bold);
+      }
+      pos += len + 1;
+    }
+    return s;
+  }
 
   function addFourColorBar(slide) {
-    var colors = [GOOGLE_BLUE, GOOGLE_RED, GOOGLE_YELLOW, GOOGLE_GREEN];
+    var colors = ["#4285F4", "#EA4335", "#FBBC04", "#34A853"];
     for (var i = 0; i < 4; i++) {
-      var seg = slide.insertShape(SlidesApp.ShapeType.RECTANGLE, i * 180, 0, 180, 5);
-      seg.getFill().setSolidFill(colors[i]);
-      seg.getBorder().setTransparent();
+      addRect(slide, i * 180, 0, 180, 4, colors[i], null, 0, false);
     }
   }
 
-  function addSpeakerNotes(slide, scriptText) {
-    try {
-      slide.getNotesPage().getSpeakerNotesShape().getText().setText(scriptText);
-    } catch (e) {}
-  }
-
-  function setupStageSlide(slide, isDark, eyebrowText, eyebrowColor, titleText, subtitleText, slideNumStr, notesText) {
-    slide.getBackground().setSolidFill(isDark ? STAGE_DARK : STAGE_LIGHT);
+  function setupHeaderAndFooter(slide, isDark, eyebrow, eyebrowCol, title, subtitle, numStr, footLeft, footRight, footRightCol) {
+    slide.getBackground().setSolidFill(isDark ? "#0E1015" : "#FFFFFF");
     addFourColorBar(slide);
 
-    var eyebrow = slide.insertTextBox(eyebrowText.toUpperCase(), 44, 22, 480, 20);
-    eyebrow.getText().getTextStyle()
-      .setFontFamily(FONT_HEADING)
-      .setFontSize(9)
-      .setBold(true)
-      .setForegroundColor(eyebrowColor);
-
-    var numBox = slide.insertTextBox(slideNumStr, 630, 22, 50, 20);
-    numBox.getText().getTextStyle()
-      .setFontFamily(FONT_MONO)
-      .setFontSize(9)
-      .setForegroundColor(isDark ? TEXT_MUTED_DARK : TEXT_MUTED_LIGHT);
-
-    var title = slide.insertTextBox(titleText, 44, 42, 632, 46);
-    title.getText().getTextStyle()
-      .setFontFamily(FONT_DISPLAY)
-      .setFontSize(24)
-      .setBold(true)
-      .setForegroundColor(isDark ? TEXT_WHITE : TEXT_PRIMARY_LIGHT);
-
-    if (subtitleText) {
-      var sub = slide.insertTextBox(subtitleText, 44, 86, 632, 32);
-      sub.getText().getTextStyle()
-        .setFontFamily(FONT_BODY)
-        .setFontSize(12)
-        .setForegroundColor(isDark ? TEXT_MUTED_DARK : TEXT_MUTED_LIGHT);
+    addStyledBox(slide, 36, 14, 480, 18, null, null, 0, false, [
+      { text: eyebrow.toUpperCase(), font: FONT_HEADING, size: 8.5, color: eyebrowCol, bold: true }
+    ]);
+    addStyledBox(slide, 620, 14, 64, 18, null, null, 0, false, [
+      { text: numStr, font: FONT_MONO, size: 8.5, color: isDark ? "#9AA0A6" : "#5F6368", bold: false }
+    ]);
+    addStyledBox(slide, 36, 30, 648, 34, null, null, 0, false, [
+      { text: title, font: FONT_DISPLAY, size: 20, color: isDark ? "#FFFFFF" : "#202124", bold: true }
+    ]);
+    if (subtitle) {
+      addStyledBox(slide, 36, 62, 648, 24, null, null, 0, false, [
+        { text: subtitle, font: FONT_BODY, size: 10, color: isDark ? "#BDC1C6" : "#5F6368", bold: false }
+      ]);
     }
-
-    if (notesText) {
-      addSpeakerNotes(slide, notesText);
+    if (footLeft) {
+      addRect(slide, 36, 370, 648, 1, isDark ? "#2D3343" : "#DADCE0", null, 0, false);
+      addStyledBox(slide, 36, 374, 440, 20, null, null, 0, false, [
+        { text: footLeft, font: FONT_BODY, size: 8, color: isDark ? "#9AA0A6" : "#5F6368", bold: false }
+      ]);
+      addStyledBox(slide, 480, 374, 204, 20, null, null, 0, false, [
+        { text: footRight || "", font: FONT_MONO, size: 8, color: footRightCol || (isDark ? "#8AB4F8" : "#5F6368"), bold: true }
+      ]);
     }
-  }
-
-  function addBentoTile(slide, x, y, w, h, bgHex, borderHex, kickerText, kickerColor, headingText, headingColor, bodyText, bodyColor) {
-    var rect = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, x, y, w, h);
-    rect.getFill().setSolidFill(bgHex);
-    rect.getBorder().setWeight(1).getLineFill().setSolidFill(borderHex);
-
-    var fullStr = kickerText + "\n" + headingText + "\n\n" + bodyText;
-    var tb = slide.insertTextBox(fullStr, x + 12, y + 10, w - 24, h - 18);
-    var t = tb.getText();
-    t.getTextStyle().setFontFamily(FONT_BODY).setFontSize(10).setForegroundColor(bodyColor);
-
-    var kLen = kickerText.length;
-    var hLen = headingText.length;
-    t.getRange(0, kLen).getTextStyle()
-      .setFontFamily(FONT_MONO)
-      .setFontSize(8)
-      .setBold(true)
-      .setForegroundColor(kickerColor);
-    t.getRange(kLen + 1, kLen + 1 + hLen).getTextStyle()
-      .setFontFamily(FONT_DISPLAY)
-      .setFontSize(14)
-      .setBold(true)
-      .setForegroundColor(headingColor);
-  }
-
-  function addTerminalBlock(slide, x, y, w, h, codeStr) {
-    var box = slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE, x, y, w, h);
-    box.getFill().setSolidFill(CODE_DARK);
-    box.getBorder().setWeight(1).getLineFill().setSolidFill("#3C4043");
-    var t = box.getText();
-    t.setText(codeStr);
-    t.getTextStyle()
-      .setFontFamily(FONT_MONO)
-      .setFontSize(9.5)
-      .setForegroundColor("#E8EAED");
   }
 
   // =========================================================================
-  // SLIDE 01: Opening (Dark Stage)
+  // SLIDE 01: Hero Opening (Dark Stage #0E1015)
   // =========================================================================
   var s1 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  s1.getBackground().setSolidFill(STAGE_DARK);
+  s1.getBackground().setSolidFill("#0E1015");
   addFourColorBar(s1);
-  addSpeakerNotes(
-    s1,
-    "Good morning everyone, and welcome to Google Cloud Next '27. Over the past year, developers have moved from building single-agent prototypes to running mission-critical agentic systems in production. Today we are opening up the entire Agent Development Lifecycle to every framework: from ADK to LangChain, LangGraph, and beyond."
-  );
-
-  var s1Pill = s1.insertTextBox("GOOGLE CLOUD NEXT '27  |  DEVELOPER SESSION  |  AGENTS CLI v1.8+", 48, 54, 540, 24);
-  s1Pill.getText().getTextStyle().setFontFamily(FONT_MONO).setFontSize(10).setBold(true).setForegroundColor(GOOGLE_BLUE_LIGHT);
-
-  var s1Hero = s1.insertTextBox("Every agent framework.\nOne production lifecycle.", 48, 95, 624, 115);
-  s1Hero.getText().getTextStyle().setFontFamily(FONT_DISPLAY).setFontSize(38).setBold(true).setForegroundColor(TEXT_WHITE);
-
-  var s1Sub = s1.insertTextBox(
-    "Running LangChain, LangGraph, and custom enterprise governance policies natively on Google Cloud with the Agents CLI Extension System.",
-    48, 215, 600, 55
-  );
-  s1Sub.getText().getTextStyle().setFontFamily(FONT_BODY).setFontSize(15).setForegroundColor("#BDC1C6");
-
-  var s1Repo = s1.insertTextBox("Live Repo: github.com/sanketbisne/scalfod-langgraph-agentscli", 48, 340, 624, 30);
-  s1Repo.getText().getTextStyle().setFontFamily(FONT_MONO).setFontSize(11).setBold(true).setForegroundColor(GOOGLE_GREEN_LIGHT);
+  addStyledBox(s1, 42, 28, 250, 22, "#162038", "#3B5998", 1, true, [
+    { text: "Google Cloud Next '27  •  Developer Session", font: FONT_HEADING, size: 8, color: "#8AB4F8", bold: true }
+  ]);
+  addStyledBox(s1, 300, 28, 120, 22, null, null, 0, false, [
+    { text: "agents-cli v1.8+", font: FONT_MONO, size: 8, color: "#9AA0A6", bold: false }
+  ]);
+  addStyledBox(s1, 42, 90, 500, 20, null, null, 0, false, [
+    { text: "POWERING THE AGENT DEVELOPMENT LIFECYCLE", font: FONT_HEADING, size: 9, color: "#8AB4F8", bold: true }
+  ]);
+  addStyledBox(s1, 42, 112, 636, 105, null, null, 0, false, [
+    { text: "Every agent framework.", font: FONT_DISPLAY, size: 34, color: "#FFFFFF", bold: true },
+    { text: "One production lifecycle.", font: FONT_DISPLAY, size: 34, color: "#8AB4F8", bold: true }
+  ]);
+  addStyledBox(s1, 42, 225, 580, 55, null, null, 0, false, [
+    { text: "Running LangChain, LangGraph, and custom enterprise governance policies natively on Google Cloud with the Agents CLI Extension System.", font: FONT_BODY, size: 12.5, color: "#BDC1C6", bold: false }
+  ]);
+  addRect(s1, 42, 348, 636, 1, "#2D3343", null, 0, false);
+  addStyledBox(s1, 42, 358, 340, 24, "#1F2430", "#2D3343", 1, true, [
+    { text: "github.com/sanketbisne/scalfod-langgraph-agentscli", font: FONT_MONO, size: 8.5, color: "#FFFFFF", bold: false }
+  ]);
 
   // =========================================================================
-  // SLIDE 02: Sundar's Big Numbers Impact Slide (Dark Stage)
+  // SLIDE 02: By The Numbers (Dark Stage #0E1015)
   // =========================================================================
   var s2 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s2, true,
-    "By The Numbers", GOOGLE_BLUE_LIGHT,
+  setupHeaderAndFooter(
+    s2, true, "By The Numbers", "#8AB4F8",
     "Decoupling the lifecycle from the runtime.",
-    "Why re-architect 24 CLI commands when only 6 depend on the agent framework?",
+    "Out of 24 CLI commands, 18 are framework-agnostic and only 6 touch the agent runtime.",
     "02 / 10",
-    "When we looked inside Agents CLI, we saw that out of 24 commands, 18 are completely framework-agnostic. Only 6 commands touch the agent runtime. By making those 6 commands extensible, developers get the entire Google Cloud lifecycle with 0% framework lock-in."
+    "Available starting in Agents CLI v1.5+ (Extension System) & v1.8+ (LangChain Template)",
+    "google/agents-cli", "#8AB4F8"
   );
-  addBentoTile(
-    s2, 44, 130, 200, 225, CARD_DARK, BORDER_DARK,
-    "PRODUCTION LIFECYCLE", GOOGLE_BLUE_LIGHT,
-    "18+ Native Commands", TEXT_WHITE,
-    "deploy, eval grade, eval compare, infra, scaffold, lint, and login work out of the box for any framework.",
-    TEXT_MUTED_DARK
-  );
-  addBentoTile(
-    s2, 260, 130, 200, 225, CARD_DARK, BORDER_DARK,
-    "RUNTIME INTERCEPTION", GOOGLE_GREEN_LIGHT,
-    "6 Overridden Commands", TEXT_WHITE,
-    "run, playground, eval.generate, and publish hot-swap cleanly via agents-cli-extension.yaml.",
-    TEXT_MUTED_DARK
-  );
-  addBentoTile(
-    s2, 476, 130, 200, 225, CARD_DARK, BORDER_DARK,
-    "PURE LANGGRAPH", GOOGLE_YELLOW_LIGHT,
-    "0% ADK Lock-In", TEXT_WHITE,
-    "Zero google-adk dependency in pyproject.toml. Pure LangChain and LangGraph code in production.",
-    TEXT_MUTED_DARK
-  );
+  addStyledBox(s2, 36, 98, 206, 255, "#161922", "#2D3343", 1, true, [
+    { text: "18+", font: FONT_DISPLAY, size: 38, color: "#8AB4F8", bold: true },
+    { text: "Framework-Agnostic Commands", font: FONT_HEADING, size: 11, color: "#FFFFFF", bold: true },
+    { text: "deploy, eval grade, eval compare, infra, scaffold, lint, and login work unchanged across ADK, LangChain, and LangGraph.", font: FONT_BODY, size: 9, color: "#9AA0A6", bold: false }
+  ]);
+  addStyledBox(s2, 257, 98, 206, 255, "#161922", "#2D3343", 1, true, [
+    { text: "6", font: FONT_DISPLAY, size: 38, color: "#81C995", bold: true },
+    { text: "Runtime Overrides", font: FONT_HEADING, size: 11, color: "#FFFFFF", bold: true },
+    { text: "run, playground, and eval.generate hot-swap via a single agents-cli-extension.yaml manifest.", font: FONT_BODY, size: 9, color: "#9AA0A6", bold: false }
+  ]);
+  addStyledBox(s2, 478, 98, 206, 255, "#161922", "#2D3343", 1, true, [
+    { text: "0%", font: FONT_DISPLAY, size: 38, color: "#FDD663", bold: true },
+    { text: "Framework Lock-In", font: FONT_HEADING, size: 11, color: "#FFFFFF", bold: true },
+    { text: "Zero google-adk dependency required in pyproject.toml. Pure LangChain and LangGraph code in production.", font: FONT_BODY, size: 9, color: "#9AA0A6", bold: false }
+  ]);
 
   // =========================================================================
-  // SLIDE 03: The Developer Dilemma (Clean Light Stage)
+  // SLIDE 03: The Framework Lock-In Problem (Light Stage #FFFFFF)
   // =========================================================================
   var s3 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s3, false,
-    "Why Extensions Matter", GOOGLE_BLUE,
+  setupHeaderAndFooter(
+    s3, false, "The Framework Lock-In Problem", "#1A73E8",
     "Ending the tradeoff between velocity and choice.",
-    "Teams want Google Cloud deployment, Vertex AI evaluation, and A2A serving without rewriting LangGraph agents.",
+    "How teams previously adapted opinionated agent toolchains vs. the Agents CLI Extension System:",
     "03 / 10",
-    "Previously, teams using non-ADK frameworks or enforcing custom security gates had to either fork the CLI or write bash wrapper scripts that developers and coding agents forget to use. Extensions solve both in-place."
+    "Distributed directly via Git repositories with zero external registry required",
+    "schema: agents-cli-extension/v1alpha1", "#5F6368"
   );
-  addBentoTile(
-    s3, 44, 130, 200, 225, CARD_LIGHT, BORDER_LIGHT,
-    "LEGACY PATH 1", GOOGLE_RED,
-    "Forking the CLI", TEXT_PRIMARY_LIGHT,
-    "Permanent maintenance tax. Breaks on every upstream release and requires manual rebasing.",
-    TEXT_MUTED_LIGHT
-  );
-  addBentoTile(
-    s3, 260, 130, 200, 225, CARD_LIGHT, BORDER_LIGHT,
-    "LEGACY PATH 2", "#B06000",
-    "Bash Wrapper Scripts", TEXT_PRIMARY_LIGHT,
-    "Parallel command surface. Developers and AI coding assistants call the native CLI directly and bypass policies.",
-    TEXT_MUTED_LIGHT
-  );
-  addBentoTile(
-    s3, 476, 130, 200, 225, "#E8F0FE", GOOGLE_BLUE,
-    "CLOUD NEXT '27 STANDARD", GOOGLE_BLUE,
-    "Agents CLI Extensions", TEXT_PRIMARY_LIGHT,
-    "Declarative agents-cli-extension.yaml overrides commands in-place, pinned by exact Git commit SHA.",
-    TEXT_PRIMARY_LIGHT
-  );
+  addStyledBox(s3, 36, 98, 206, 255, "#F8F9FA", "#DADCE0", 1, true, [
+    { text: "LEGACY PATH 1", font: FONT_HEADING, size: 8, color: "#C5221F", bold: true },
+    { text: "Forking the CLI", font: FONT_HEADING, size: 13, color: "#202124", bold: true },
+    { text: "Maintain a divergent internal copy and manually rebase on every upstream release.\n\nResult: Permanent maintenance tax", font: FONT_BODY, size: 9, color: "#5F6368", bold: false }
+  ]);
+  addStyledBox(s3, 257, 98, 206, 255, "#F8F9FA", "#DADCE0", 1, true, [
+    { text: "LEGACY PATH 2", font: FONT_HEADING, size: 8, color: "#B06000", bold: true },
+    { text: "Custom Wrapper Scripts", font: FONT_HEADING, size: 13, color: "#202124", bold: true },
+    { text: "Build parallel shell scripts around the CLI. Developers and coding agents call native CLI directly.\n\nResult: Bypassed governance gates", font: FONT_BODY, size: 9, color: "#5F6368", bold: false }
+  ]);
+  addStyledBox(s3, 478, 98, 206, 255, "#E8F0FE", "#1A73E8", 2, true, [
+    { text: "CLOUD NEXT '27 STANDARD", font: FONT_HEADING, size: 8, color: "#1A73E8", bold: true },
+    { text: "Agents CLI Extensions", font: FONT_HEADING, size: 13, color: "#202124", bold: true },
+    { text: "Declarative agents-cli-extension.yaml overrides commands in-place, pinned by Git commit SHA.\n\nResult: Zero fork + 100% enforcement", font: FONT_BODY, size: 9, color: "#202124", bold: false }
+  ]);
 
   // =========================================================================
-  // SLIDE 04: Inside the Command Surface (6 vs 18 Split)
+  // SLIDE 04: 3-Layer Stack Cake - 6 vs 18 Split (Light Stage #FFFFFF)
   // =========================================================================
   var s4 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s4, false,
-    "Command Surface Architecture", GOOGLE_GREEN,
-    "Inside the Agents CLI Command Surface (6 vs. 18 Split)",
+  setupHeaderAndFooter(
+    s4, false, "Inside the Command Surface (6 vs. 18 Split)", "#137333",
+    "One unified command surface across the stack.",
     "A single agents-cli-extension.yaml swaps only the 6 runtime commands and keeps the 18 production commands intact.",
     "04 / 10",
-    "Here is the exact breakdown. On the left, the 6 commands overridden by the LangChain extension. On the right, the 18 native Google Cloud commands that work identically across every framework."
+    "Same Dockerfile CMD & FastAPI A2A contract across every framework",
+    "app.fast_api_app:app", "#5F6368"
   );
-  addBentoTile(
-    s4, 44, 130, 306, 230, "#F8FAFF", GOOGLE_BLUE,
-    "[↑ LANGCHAIN] OVERRIDES", GOOGLE_BLUE,
-    "6 Framework-Coupled Commands", TEXT_PRIMARY_LIGHT,
-    "- run -> uv run python scripts/run.py\n- playground -> uv run langgraph dev --port 8080\n- eval.generate -> uv run python scripts/eval_generate.py\n- publish.gemini-enterprise -> scripts/publish.py\n- eval.dataset / eval.optimize -> Clean refusal wrapper",
-    TEXT_PRIMARY_LIGHT
-  );
-  addBentoTile(
-    s4, 370, 130, 306, 230, "#F6FEF8", GOOGLE_GREEN,
-    "NATIVE BUILT-IN LIFECYCLE", GOOGLE_GREEN,
-    "18+ Framework-Agnostic Commands", TEXT_PRIMARY_LIGHT,
-    "- deploy (Cloud Run / GKE via FastAPI A2A)\n- eval grade / eval compare / eval analyze\n- infra (Terraform modules)\n- scaffold create / enhance / upgrade\n- extension add / list / update / remove\n- install / info / lint / login",
-    TEXT_PRIMARY_LIGHT
-  );
+  addStyledBox(s4, 36, 94, 648, 66, "#F8F9FA", "#DADCE0", 1, true, [
+    { text: "1. AGENT AUTHORING LAYER (BRING YOUR OWN FRAMEWORK)", font: FONT_HEADING, size: 8, color: "#5F6368", bold: true },
+    { text: "[ LangChain 1.0+ ]     [ LangGraph StateGraph ]     [ Deep Agents ]     [ Google ADK (Python / Go) ]", font: FONT_HEADING, size: 10, color: "#1967D2", bold: true }
+  ]);
+  addStyledBox(s4, 36, 168, 318, 112, "#F8FAFF", "#4285F4", 2, true, [
+    { text: "6 Overridden Runtime Commands  [↑ langchain]", font: FONT_HEADING, size: 10, color: "#1967D2", bold: true },
+    { text: "• run -> uv run python scripts/run.py\n• playground -> uv run langgraph dev --port 8080\n• eval.generate -> uv run python scripts/eval_generate.py\n• publish.gemini-enterprise & eval.dataset / optimize", font: FONT_MONO, size: 8, color: "#3C4043", bold: false }
+  ]);
+  addStyledBox(s4, 366, 168, 318, 112, "#F6FEF8", "#34A853", 2, true, [
+    { text: "18+ Native Production Commands  [Built-In]", font: FONT_HEADING, size: 10, color: "#137333", bold: true },
+    { text: "• deploy (Cloud Run / GKE via FastAPI A2A)\n• eval grade / eval compare / eval analyze (Vertex AI)\n• infra (Terraform) & scaffold create / enhance\n• extension add / list & install / info / lint / login", font: FONT_MONO, size: 8, color: "#3C4043", bold: false }
+  ]);
+  addStyledBox(s4, 36, 288, 648, 68, "#202124", "#202124", 1, true, [
+    { text: "3. GOOGLE CLOUD PRODUCTION FOUNDATION", font: FONT_HEADING, size: 8, color: "#8AB4F8", bold: true },
+    { text: "[ Cloud Run (FastAPI A2A) ]    [ Vertex AI Eval Service ]    [ Gemini on Vertex AI ]    [ Cloud Trace & Logging ]", font: FONT_MONO, size: 9, color: "#FFFFFF", bold: false }
+  ]);
 
   // =========================================================================
-  // SLIDE 05: Live Demo Act I - Scaffolding (Dark Stage)
+  // SLIDE 05: Live Demo Act 1 - Scaffolding (Dark Stage #0E1015)
   // =========================================================================
   var s5 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s5, true,
-    "Live Demo | Act 1", GOOGLE_BLUE_LIGHT,
+  setupHeaderAndFooter(
+    s5, true, "Live Demo  •  Act 1", "#8AB4F8",
     "Scaffold a pure LangGraph project in one command.",
-    "Scaffolding and extension installation happen together with zero google-adk dependency.",
+    "Scaffolding and extension installation happen together. Nothing needs to be installed globally.",
     "05 / 10",
-    "Let's walk through the commands. We run agents-cli create pointing at the LangChain template tag. Immediately, our project is wired up, and grepping for google-adk confirms zero ADK dependencies."
+    "Auto-loaded via ./agents-cli-extension.yaml at project root",
+    "Zero ADK Dependency Verified", "#81C995"
   );
-  addTerminalBlock(
-    s5, 44, 130, 632, 230,
-    "# 1. Scaffold from the first-party LangChain extension template\n" +
-    "$ agents-cli create scalfod-langgraph-agentscli \\\n" +
-    "    --agent google/agents-cli/extensions/langchain/template@v1.8.0 \\\n" +
-    "    -d cloud_run\n\n" +
-    "$ cd scalfod-langgraph-agentscli && agents-cli install\n\n" +
-    "# 2. Verify zero google-adk dependency in pyproject.toml and app/\n" +
-    "$ grep -r \"google.adk\\|google-adk\" pyproject.toml app/\n" +
-    "$ echo \"exit: $?\"\n" +
-    "exit: 1   # Verified: Zero google-adk dependency!"
-  );
+  addStyledBox(s5, 36, 98, 648, 255, "#131314", "#3C4043", 1, true, [
+    { text: "# 1. Scaffold directly from the first-party LangChain template", font: FONT_MONO, size: 9, color: "#8AB4F8", bold: false },
+    { text: "$ agents-cli create scalfod-langgraph-agentscli \\\n    --agent google/agents-cli/extensions/langchain/template@v1.8.0 \\\n    -d cloud_run\n\n$ cd scalfod-langgraph-agentscli && agents-cli install", font: FONT_MONO, size: 9, color: "#E8EAED", bold: false },
+    { text: "Agents CLI v1.8.0 • Fetching remote template: google/agents-cli/extensions/langchain/template@v1.8.0\n> ✓ Connected to project: your-project • Your agent project is ready.", font: FONT_MONO, size: 9, color: "#81C995", bold: false },
+    { text: "\n# 2. Prove zero google-adk dependency in pyproject.toml and app/", font: FONT_MONO, size: 9, color: "#8AB4F8", bold: false },
+    { text: "$ grep -r \"google.adk\\|google-adk\" pyproject.toml app/ ; echo \"exit: $?\"", font: FONT_MONO, size: 9, color: "#E8EAED", bold: false },
+    { text: "exit: 1   # Verified: Zero google-adk dependency!", font: FONT_MONO, size: 9, color: "#FDD663", bold: true }
+  ]);
 
   // =========================================================================
-  // SLIDE 06: Project Structure & CompiledStateGraph
+  // SLIDE 06: Project Structure & CompiledStateGraph (Light Stage #FFFFFF)
   // =========================================================================
   var s6 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s6, false,
-    "Codebase Architecture", "#B06000",
-    "Project Structure & LangGraph CompiledStateGraph",
+  setupHeaderAndFooter(
+    s6, false, "Codebase Architecture", "#B06000",
+    "One graph representation: CompiledStateGraph",
     "In LangChain 1.0+, create_agent compiles directly into a LangGraph CompiledStateGraph.",
     "06 / 10",
-    "On the left is the generated project structure. On the right is app/agent.py, where create_agent compiles our Gemini model and tools into a LangGraph CompiledStateGraph."
+    "Authenticates automatically via Application Default Credentials (ADC) on Vertex AI",
+    "GOOGLE_GENAI_USE_VERTEXAI=True", "#5F6368"
   );
-  addTerminalBlock(
-    s6, 44, 130, 306, 230,
-    "scalfod-langgraph-agentscli/\n" +
-    "├── agents-cli-extension.yaml\n" +
-    "├── agents-cli-manifest.yaml\n" +
-    "├── langgraph.json\n" +
-    "├── pyproject.toml\n" +
-    "├── Dockerfile\n" +
-    "├── app/\n" +
-    "│   ├── agent.py       # CompiledStateGraph\n" +
-    "│   ├── tools.py       # DeepCite tools\n" +
-    "│   ├── fast_api_app.py\n" +
-    "│   └── app_utils/a2a.py\n" +
-    "└── extensions/sbom-deploy/"
-  );
-  addTerminalBlock(
-    s6, 370, 130, 306, 230,
-    "# app/agent.py\n" +
-    "from langchain.agents import create_agent\n" +
-    "from langchain_google_genai import ChatGoogleGenerativeAI\n" +
-    "from langgraph.graph.state import CompiledStateGraph\n\n" +
-    "llm = ChatGoogleGenerativeAI(\n" +
-    "    model=\"gemini-2.5-flash\", temperature=0\n" +
-    ")\n\n" +
-    "root_agent: CompiledStateGraph = create_agent(\n" +
-    "    model=llm,\n" +
-    "    tools=[\n" +
-    "        create_research_plan,\n" +
-    "        search_curated_kb,\n" +
-    "        search_arxiv_papers,\n" +
-    "        critique_research_draft,\n" +
-    "    ],\n" +
-    "    system_prompt=SYSTEM_PROMPT,\n" +
-    ")"
-  );
+  addStyledBox(s6, 36, 98, 318, 255, "#131314", "#3C4043", 1, true, [
+    { text: "Project Tree", font: FONT_HEADING, size: 9, color: "#8AB4F8", bold: true },
+    { text: "scalfod-langgraph-agentscli/\n├── agents-cli-extension.yaml  # Overrides\n├── agents-cli-manifest.yaml   # cloud_run\n├── langgraph.json             # Studio\n├── pyproject.toml             # Zero ADK\n├── Dockerfile                 # FastAPI :8080\n├── app/\n│   ├── agent.py               # StateGraph\n│   ├── tools.py               # DeepCite\n│   ├── fast_api_app.py        # A2A server\n│   └── app_utils/a2a.py       # agent.json\n└── extensions/sbom-deploy/    # SBOM gate", font: FONT_MONO, size: 8.5, color: "#E8EAED", bold: false }
+  ]);
+  addStyledBox(s6, 366, 98, 318, 255, "#131314", "#3C4043", 1, true, [
+    { text: "app/agent.py", font: FONT_HEADING, size: 9, color: "#81C995", bold: true },
+    { text: "from langchain.agents import create_agent\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langgraph.graph.state import CompiledStateGraph\n\nllm = ChatGoogleGenerativeAI(\n    model=\"gemini-2.5-flash\", temperature=0\n)\n\nroot_agent: CompiledStateGraph = create_agent(\n    model=llm,\n    tools=[create_research_plan, search_curated_kb,\n           search_arxiv_papers, critique_research_draft],\n    system_prompt=SYSTEM_PROMPT,\n)", font: FONT_MONO, size: 8.5, color: "#E8EAED", bold: false }
+  ]);
 
   // =========================================================================
-  // SLIDE 07: DeepCite Agent Architecture
+  // SLIDE 07: DeepCite Research & Critique Loop (Light Stage #FFFFFF)
   // =========================================================================
   var s7 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s7, false,
-    "Reference Workload", GOOGLE_BLUE,
-    "DeepCite Architecture (Plan -> Search -> Critique -> Report)",
-    "Iterative self-reflection workflow that verifies inline citations before synthesizing the final report.",
+  setupHeaderAndFooter(
+    s7, false, "DeepCite Reference Workload", "#1A73E8",
+    "Iterative Research & Self-Critique Loop",
+    "Grounded retrieval and mandatory citation verification before generating the final technical report:",
     "07 / 10",
-    "DeepCite implements a four-stage research loop: Plan sub-questions, Search curated and live scientific sources, Critique the draft for citation coverage, and synthesize a Cited Markdown Report."
+    "Deterministic offline fallbacks guarantee reproducible runs in CI/CD and sandboxed environments",
+    "app/tools.py", "#1A73E8"
   );
-  addBentoTile(
-    s7, 44, 130, 150, 225, CARD_LIGHT, GOOGLE_BLUE,
-    "STAGE 01", GOOGLE_BLUE,
-    "Plan", TEXT_PRIMARY_LIGHT,
-    "create_research_plan decomposes user prompts into sub-questions.",
-    TEXT_MUTED_LIGHT
-  );
-  addBentoTile(
-    s7, 204, 130, 150, 225, CARD_LIGHT, "#B06000",
-    "STAGE 02", "#B06000",
-    "Search", TEXT_PRIMARY_LIGHT,
-    "search_curated_kb, search_arxiv_papers, and search_wikipedia_summary.",
-    TEXT_MUTED_LIGHT
-  );
-  addBentoTile(
-    s7, 364, 130, 150, 225, CARD_LIGHT, GOOGLE_RED,
-    "STAGE 03", GOOGLE_RED,
-    "Critique", TEXT_PRIMARY_LIGHT,
-    "critique_research_draft verifies >= 2 source IDs and technical depth.",
-    TEXT_MUTED_LIGHT
-  );
-  addBentoTile(
-    s7, 524, 130, 152, 225, CARD_LIGHT, GOOGLE_GREEN,
-    "STAGE 04", GOOGLE_GREEN,
-    "Report", TEXT_PRIMARY_LIGHT,
-    "Synthesizes Markdown with inline [KB-...] and [ARXIV-...] citations.",
-    TEXT_MUTED_LIGHT
-  );
+  var stages = [
+    { k: "01 • PLAN", col: "#1A73E8", bar: "#4285F4", fn: "create_research_plan", d: "Decomposes complex prompts into structured sub-questions and targeted search queries." },
+    { k: "02 • SEARCH", col: "#B06000", bar: "#FBBC04", fn: "search_curated_kb", d: "Retrieves evidence with explicit IDs ([KB-...], [ARXIV-...], [WIKI-...]) and offline fallbacks." },
+    { k: "03 • CRITIQUE", col: "#C5221F", bar: "#EA4335", fn: "critique_research_draft", d: "Audits draft claims for >= 2 distinct citations and depth; triggers revision if incomplete." },
+    { k: "04 • REPORT", col: "#137333", bar: "#34A853", fn: "research-report CLI", d: "Outputs Markdown with inline [SOURCE_ID] citations and a verified ## References section." }
+  ];
+  for (var idx = 0; idx < 4; idx++) {
+    var st = stages[idx];
+    var sx = 36 + idx * 165;
+    addStyledBox(s7, sx, 98, 153, 255, "#F8F9FA", "#DADCE0", 1, true, [
+      { text: st.k, font: FONT_HEADING, size: 8.5, color: st.col, bold: true },
+      { text: st.fn, font: FONT_MONO, size: 8.5, color: "#202124", bold: true },
+      { text: "\n" + st.d, font: FONT_BODY, size: 8.5, color: "#5F6368", bold: false }
+    ]);
+    addRect(s7, sx + 2, 98, 149, 5, st.bar, null, 0, false);
+  }
 
   // =========================================================================
-  // SLIDE 08: Running Locally & LangGraph Studio + Evals (Dark Stage)
+  // SLIDE 08: LangGraph Studio & Vertex AI Evaluations (Dark Stage #0E1015)
   // =========================================================================
   var s8 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s8, true,
-    "Live Demo | Act 2 & Act 3", GOOGLE_GREEN_LIGHT,
-    "LangGraph Studio & Framework-Agnostic Evaluations",
+  setupHeaderAndFooter(
+    s8, true, "Live Demo  •  Act 2 & Act 3", "#81C995",
+    "LangGraph Studio & Vertex AI Evaluations.",
     "Boot LangGraph Studio via agents-cli playground and grade traces with Vertex AI Eval Service.",
     "08 / 10",
-    "Running agents-cli playground boots LangGraph Studio on port 8080. And for evaluation, eval generate drives the LangGraph graph while native eval grade scores the output using Vertex AI."
+    "Unsupported ADK-simulator commands (eval dataset) exit cleanly with an explanation",
+    "Standard EvaluationDataset Schema", "#81C995"
   );
-  addTerminalBlock(
-    s8, 44, 130, 306, 230,
-    "# 1. Local Run & LangGraph Studio\n" +
-    "$ agents-cli --help | grep -E \"playground|run\"\n" +
-    "  playground  Start LangGraph server [↑ langchain]\n" +
-    "  run         Run compiled graph     [↑ langchain]\n\n" +
-    "$ agents-cli info\n" +
-    "$ agents-cli run \"How do extensions work?\"\n" +
-    "$ agents-cli playground  # Port 8080"
-  );
-  addTerminalBlock(
-    s8, 370, 130, 306, 230,
-    "# 2. Overridden Generate + Native Grade\n" +
-    "$ agents-cli eval generate \\\n" +
-    "    --dataset tests/eval/datasets/basic-dataset.json \\\n" +
-    "    -o tests/eval/output/\n\n" +
-    "$ agents-cli eval grade \\\n" +
-    "    --traces tests/eval/output/basic-dataset.json \\\n" +
-    "    --config tests/eval/eval_config.yaml\n\n" +
-    "# Clean refusal on ADK-only simulator:\n" +
-    "$ agents-cli eval dataset synthesize"
-  );
+  addStyledBox(s8, 36, 98, 318, 255, "#131314", "#3C4043", 1, true, [
+    { text: "1. RUN & INSPECT IN LANGGRAPH STUDIO", font: FONT_HEADING, size: 8.5, color: "#8AB4F8", bold: true },
+    { text: "$ agents-cli --help | grep -E \"playground|run \"\n  playground  Start LangGraph server. [↑ langchain]\n  run         Run compiled graph.     [↑ langchain]\n\n$ agents-cli run \"How do extensions work?\"", font: FONT_MONO, size: 8, color: "#E8EAED", bold: false },
+    { text: "WARNING:root:agents-cli: applying 6 extension command(s)", font: FONT_MONO, size: 8, color: "#FDD663", bold: false },
+    { text: "\n$ agents-cli playground\n> Boots LangGraph Studio on http://localhost:8080", font: FONT_MONO, size: 8, color: "#81C995", bold: true }
+  ]);
+  addStyledBox(s8, 366, 98, 318, 255, "#131314", "#3C4043", 1, true, [
+    { text: "2. OVERRIDDEN GENERATE + NATIVE GRADE", font: FONT_HEADING, size: 8.5, color: "#81C995", bold: true },
+    { text: "# Overridden: Drives LangGraph CompiledStateGraph", font: FONT_MONO, size: 8, color: "#8AB4F8", bold: false },
+    { text: "$ agents-cli eval generate \\\n    --dataset tests/eval/datasets/basic-dataset.json \\\n    -o tests/eval/output/", font: FONT_MONO, size: 8, color: "#E8EAED", bold: false },
+    { text: "\n# Native: Scores traces via Vertex AI Eval Service", font: FONT_MONO, size: 8, color: "#81C995", bold: false },
+    { text: "$ agents-cli eval grade \\\n    --traces tests/eval/output/basic-dataset.json \\\n    --config tests/eval/eval_config.yaml", font: FONT_MONO, size: 8, color: "#E8EAED", bold: false }
+  ]);
 
   // =========================================================================
-  // SLIDE 09: Custom Enterprise Extensions (Dark Stage)
+  // SLIDE 09: Custom Enterprise Governance Extension (Dark Stage #0E1015)
   // =========================================================================
   var s9 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s9, true,
-    "Live Demo | Act 4", GOOGLE_RED_LIGHT,
-    "Authoring Custom Enterprise Extensions (sbom-deploy)",
+  setupHeaderAndFooter(
+    s9, true, "Live Demo  •  Act 4", "#F28B82",
+    "Policy-as-Code: Custom sbom-deploy Gate",
     "AGENTS_CLI_DISABLE_OVERRIDES=1 lets wrapper scripts run Syft + Grype checks and call native deploy without recursion.",
     "09 / 10",
-    "Platform teams can wrap deploy with an SBOM scan using the exact same manifest format. Because the loader sets AGENTS_CLI_DISABLE_OVERRIDES=1, calling exec agents-cli deploy delegates to the native command with zero recursion."
+    "$ agents-cli extension add local@./extensions/sbom-deploy --yes",
+    "AGENTS_CLI_DISABLE_OVERRIDES=1", "#81C995"
   );
-  addTerminalBlock(
-    s9, 44, 130, 306, 230,
-    "# agents-cli-extension.yaml\n" +
-    "schema: agents-cli-extension/v1alpha1\n" +
-    "name: sbom-deploy\n" +
-    "requires:\n" +
-    "  agents_cli: \">=1.5,<2\"\n" +
-    "  on_incompatible: warn\n\n" +
-    "commands:\n" +
-    "  override:\n" +
-    "    deploy:\n" +
-    "      run: [\"bash\", \"scripts/sbom_then_deploy.sh\"]\n" +
-    "  add:\n" +
-    "    sbom-report:\n" +
-    "      run: [\"bash\", \"scripts/sbom_report.sh\"]"
-  );
-  addTerminalBlock(
-    s9, 370, 130, 306, 230,
-    "#!/usr/bin/env bash\n" +
-    "# scripts/sbom_then_deploy.sh\n" +
-    "set -euo pipefail\n\n" +
-    "syft dir:. -o cyclonedx-json > /tmp/sbom.cdx.json\n" +
-    "grype sbom:/tmp/sbom.cdx.json --fail-on critical\n\n" +
-    "# AGENTS_CLI_DISABLE_OVERRIDES=1 is set by loader\n" +
-    "# Hits built-in deploy with zero recursion!\n" +
-    "exec agents-cli deploy \"$@\""
-  );
+  addStyledBox(s9, 36, 98, 318, 255, "#131314", "#3C4043", 1, true, [
+    { text: "AGENTS-CLI-EXTENSION.YAML", font: FONT_HEADING, size: 8.5, color: "#FDD663", bold: true },
+    { text: "schema: agents-cli-extension/v1alpha1\nname: sbom-deploy\ndescription: Scan project SBOM, then run native deploy.\nrequires:\n  agents_cli: \">=1.5,<2\"\n  on_incompatible: warn\n\ncommands:\n  override:\n    deploy:\n      run: [\"bash\", \"scripts/sbom_then_deploy.sh\"]\n  add:\n    sbom-report:\n      run: [\"bash\", \"scripts/sbom_report.sh\"]", font: FONT_MONO, size: 8, color: "#E8EAED", bold: false }
+  ]);
+  addStyledBox(s9, 366, 98, 318, 255, "#131314", "#3C4043", 1, true, [
+    { text: "SCRIPTS/SBOM_THEN_DEPLOY.SH", font: FONT_HEADING, size: 8.5, color: "#81C995", bold: true },
+    { text: "#!/usr/bin/env bash\nset -euo pipefail\n\necho \"[sbom-deploy] Generating CycloneDX SBOM...\"\nsyft dir:. -o cyclonedx-json > /tmp/sbom.cdx.json\n\necho \"[sbom-deploy] Scanning for critical CVEs...\"\ngrype sbom:/tmp/sbom.cdx.json --fail-on critical", font: FONT_MONO, size: 8, color: "#E8EAED", bold: false },
+    { text: "\n# Loader sets AGENTS_CLI_DISABLE_OVERRIDES=1\n# Delegates to built-in deploy with zero recursion!", font: FONT_MONO, size: 8, color: "#8AB4F8", bold: true },
+    { text: "exec agents-cli deploy \"$@\"", font: FONT_MONO, size: 8, color: "#81C995", bold: true }
+  ]);
 
   // =========================================================================
-  // SLIDE 10: Sundar's Closing Bento Grid Summary (Dark Stage)
+  // SLIDE 10: Closing Bento Grid Summary + Bottom CTA Bar (Dark Stage #0E1015)
   // =========================================================================
   var s10 = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-  setupStageSlide(
-    s10, true,
-    "Google Cloud Next '27 Summary", GOOGLE_BLUE_LIGHT,
+  setupHeaderAndFooter(
+    s10, true, "Google Cloud Next '27 Summary", "#8AB4F8",
     "The Open Agent Development Lifecycle",
-    "github.com/sanketbisne/scalfod-langgraph-agentscli",
+    "",
     "10 / 10",
-    "To wrap up: with Agents CLI v1.8+, you get complete framework choice with LangChain and LangGraph, local visual debugging in LangGraph Studio, Vertex AI evaluations, custom SBOM deploy gates, SHA lockfiles, and one-command Cloud Run A2A deployment. Thank you!"
+    null, null, null
   );
-  addBentoTile(
-    s10, 44, 125, 200, 110, CARD_DARK, BORDER_DARK,
-    "01 | OPEN FRAMEWORKS", GOOGLE_BLUE_LIGHT,
-    "LangChain & LangGraph", TEXT_WHITE,
-    "Zero google-adk dependency; unified CompiledStateGraph.",
-    TEXT_MUTED_DARK
-  );
-  addBentoTile(
-    s10, 260, 125, 200, 110, CARD_DARK, BORDER_DARK,
-    "02 | VISUAL DEBUGGING", GOOGLE_GREEN_LIGHT,
-    "LangGraph Studio", TEXT_WHITE,
-    "agents-cli playground launches Studio on port 8080.",
-    TEXT_MUTED_DARK
-  );
-  addBentoTile(
-    s10, 476, 125, 200, 110, CARD_DARK, BORDER_DARK,
-    "03 | QUALITY FLYWHEEL", GOOGLE_YELLOW_LIGHT,
-    "Vertex AI Evaluations", TEXT_WHITE,
-    "Overridden eval generate + native Vertex AI eval grade.",
-    TEXT_MUTED_DARK
-  );
-  addBentoTile(
-    s10, 44, 245, 200, 110, CARD_DARK, BORDER_DARK,
-    "04 | POLICY AS CODE", GOOGLE_RED_LIGHT,
-    "SBOM Pre-Deploy Gates", TEXT_WHITE,
-    "Syft + Grype checks with AGENTS_CLI_DISABLE_OVERRIDES=1.",
-    TEXT_MUTED_DARK
-  );
-  addBentoTile(
-    s10, 260, 245, 200, 110, CARD_DARK, BORDER_DARK,
-    "05 | SUPPLY CHAIN", GOOGLE_BLUE_LIGHT,
-    "SHA Lockfile Pinning", TEXT_WHITE,
-    "Bit-for-bit reproducible CI via agents-cli-extensions.yaml.",
-    TEXT_MUTED_DARK
-  );
-  addBentoTile(
-    s10, 476, 245, 200, 110, CARD_DARK, BORDER_DARK,
-    "06 | PRODUCTION SERVING", GOOGLE_GREEN_LIGHT,
-    "Cloud Run + A2A", TEXT_WHITE,
-    "Standard FastAPI + A2A container contract on port 8080.",
-    TEXT_MUTED_DARK
-  );
+  var tiles = [
+    { x: 36, y: 74, k: "01 • OPEN FRAMEWORKS", col: "#8AB4F8", h: "LangChain & LangGraph", d: "First-party template with zero google-adk dependency and unified CompiledStateGraph." },
+    { x: 257, y: 74, k: "02 • LOCAL DEVELOPER EXPERIENCE", col: "#81C995", h: "LangGraph Studio", d: "agents-cli playground boots LangGraph dev server on port 8080 for visual graph inspection." },
+    { x: 478, y: 74, k: "03 • QUALITY FLYWHEEL", col: "#FDD663", h: "Vertex AI Evaluations", d: "Overridden eval generate pairs seamlessly with native eval grade and eval compare." },
+    { x: 36, y: 194, k: "04 • ENTERPRISE GOVERNANCE", col: "#F28B82", h: "SBOM Pre-Deploy Gates", d: "Wrap deploy with Syft + Grype checks and delegate safely via AGENTS_CLI_DISABLE_OVERRIDES=1." },
+    { x: 257, y: 194, k: "05 • SUPPLY-CHAIN SECURITY", col: "#8AB4F8", h: "SHA Lockfile Discipline", d: "Pinned commit SHAs in agents-cli-extensions.yaml ensure bit-for-bit reproducible CI builds." },
+    { x: 478, y: 194, k: "06 • SERVERLESS PRODUCTION", col: "#81C995", h: "Cloud Run + A2A Protocol", d: "Exposes /.well-known/agent.json and /a2a/tasks/send over FastAPI on port 8080." }
+  ];
+  for (var tIdx = 0; tIdx < tiles.length; tIdx++) {
+    var tl = tiles[tIdx];
+    addStyledBox(s10, tl.x, tl.y, 206, 108, "#161922", "#2D3343", 1, true, [
+      { text: tl.k, font: FONT_MONO, size: 7.5, color: tl.col, bold: true },
+      { text: tl.h, font: FONT_DISPLAY, size: 12, color: "#FFFFFF", bold: true },
+      { text: tl.d, font: FONT_BODY, size: 8, color: "#9AA0A6", bold: false }
+    ]);
+  }
+  addStyledBox(s10, 36, 316, 648, 56, "#131C31", "#4285F4", 1.5, true, [
+    { text: "GET STARTED TODAY", font: FONT_HEADING, size: 8, color: "#8AB4F8", bold: true },
+    { text: "https://github.com/sanketbisne/scalfod-langgraph-agentscli     |     uvx google-agents-cli setup", font: FONT_MONO, size: 10.5, color: "#FFFFFF", bold: true }
+  ]);
 
-  initialSlide.remove();
-  Logger.log("Created Cloud Next '27 Google Slides Deck: " + deck.getUrl());
+  if (existingSlides.length === 1) {
+    try { existingSlides[0].remove(); } catch (e) {}
+  }
+  Logger.log("Updated Google Slides Deck: " + deck.getUrl());
 }

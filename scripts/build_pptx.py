@@ -1,21 +1,30 @@
-"""Zero-dependency OpenXML (.pptx) generator for Google Slides import.
+"""High-fidelity OpenXML (.pptx) generator matching the HTML presentation deck 1-for-1.
 
-Generates `docs/Cloud_Next_27_Agents_CLI_LangGraph.pptx` (16:9 widescreen) with:
-- Google Sans Display, Google Sans, Google Sans Text, and Google Sans Mono typography
-- Google Cloud Next '27 dark stage (#0E1015) and light stage (#FFFFFF) slides
-- 4-color Google top bar, rounded Bento Grid tiles, and dark terminal code cards
-- Built-in smooth fade transitions (<p:transition>) recognized by Google Slides
+Generates `docs/Cloud_Next_27_Agents_CLI_LangGraph.pptx` (16:9 widescreen, 960x540 pt) with:
+- Exact visual parity with `docs/slides.html` across all 10 slides
+- Multi-color syntax-highlighted terminal code blocks (#8AB4F8, #81C995, #FDD663, #F28B82)
+- Giant 52pt metric counters on Slide 2 (18+, 6, 0%)
+- Pill badges and footer dividers on Slide 3
+- Full 3-Layer Stack Cake on Slide 4 (Authoring Layer + 6 vs 18 Split + Dark Cloud Foundation)
+- 4-Stage Pipeline Cards with top colored accent bars on Slide 7
+- 6-Tile Bento Grid + bottom CTA bar on Slide 10
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Union
 from xml.sax.saxutils import escape
 import zipfile
 
 PT = 12700  # 1 point = 12,700 EMUs
-SLIDE_W = 960 * PT  # 12,192,000 EMUs (16:9 widescreen, matches 960x540 pt canvas)
-SLIDE_H = 540 * PT  # 6,858,000 EMUs
+SLIDE_W = 960 * PT
+SLIDE_H = 540 * PT
+
+# A Run is (text, font_family, size_pt, color_hex, is_bold)
+RunSpec = tuple[str, str, float, str, bool]
+# A Paragraph is either a single RunSpec or a list of RunSpecs on the same line
+ParaSpec = Union[RunSpec, list[RunSpec]]
 
 
 def _hex(color: str) -> str:
@@ -41,21 +50,24 @@ class SlideBuilder:
         h_pt: float,
         fill_hex: str,
         border_hex: str | None = None,
+        border_w_pt: float = 1.0,
         rounded: bool = False,
+        adj: int = 5000,
     ) -> None:
         sid = self._next_id()
         x, y, w, h = int(x_pt * PT), int(y_pt * PT), int(w_pt * PT), int(h_pt * PT)
         geom = "roundRect" if rounded else "rect"
-        av = '<a:avLst><a:gd name="adj" fmla="val 6000"/></a:avLst>' if rounded else "<a:avLst/>"
+        av = f'<a:avLst><a:gd name="adj" fmla="val {adj}"/></a:avLst>' if rounded else "<a:avLst/>"
+        bw = int(border_w_pt * PT)
         ln_xml = (
-            f'<a:ln w="12700"><a:solidFill><a:srgbClr val="{_hex(border_hex)}"/></a:solidFill></a:ln>'
+            f'<a:ln w="{bw}"><a:solidFill><a:srgbClr val="{_hex(border_hex)}"/></a:solidFill></a:ln>'
             if border_hex
             else "<a:ln><a:noFill/></a:ln>"
         )
         self.shapes.append(
             f"""<p:sp>
   <p:nvSpPr>
-    <p:cNvPr id="{sid}" name="Shape {sid}"/>
+    <p:cNvPr id="{sid}" name="Rect {sid}"/>
     <p:cNvSpPr/>
     <p:nvPr/>
   </p:nvSpPr>
@@ -68,53 +80,84 @@ class SlideBuilder:
 </p:sp>"""
         )
 
-    def add_textbox(
+    def add_box(
         self,
         x_pt: float,
         y_pt: float,
         w_pt: float,
         h_pt: float,
-        paragraphs: list[tuple[str, str, int, str, bool]],
+        paragraphs: list[ParaSpec],
         fill_hex: str | None = None,
         border_hex: str | None = None,
+        border_w_pt: float = 1.0,
         rounded: bool = False,
-        pad_pt: float = 8.0,
+        adj: int = 4500,
+        pad_l: float = 12.0,
+        pad_t: float = 10.0,
+        pad_r: float = 12.0,
+        pad_b: float = 10.0,
+        align: str = "l",
+        valign: str = "t",
+        line_spacing_pct: int = 118000,
     ) -> None:
-        """paragraphs: list of (text, font_family, size_pt, color_hex, bold)."""
         sid = self._next_id()
         x, y, w, h = int(x_pt * PT), int(y_pt * PT), int(w_pt * PT), int(h_pt * PT)
         geom = "roundRect" if rounded else "rect"
-        av = '<a:avLst><a:gd name="adj" fmla="val 5000"/></a:avLst>' if rounded else "<a:avLst/>"
+        av = f'<a:avLst><a:gd name="adj" fmla="val {adj}"/></a:avLst>' if rounded else "<a:avLst/>"
         fill_xml = (
             f'<a:solidFill><a:srgbClr val="{_hex(fill_hex)}"/></a:solidFill>'
             if fill_hex
             else "<a:noFill/>"
         )
+        bw = int(border_w_pt * PT)
         ln_xml = (
-            f'<a:ln w="12700"><a:solidFill><a:srgbClr val="{_hex(border_hex)}"/></a:solidFill></a:ln>'
+            f'<a:ln w="{bw}"><a:solidFill><a:srgbClr val="{_hex(border_hex)}"/></a:solidFill></a:ln>'
             if border_hex
             else "<a:ln><a:noFill/></a:ln>"
         )
-        pad = int(pad_pt * PT)
+        l_ins, t_ins, r_ins, b_ins = int(pad_l * PT), int(pad_t * PT), int(pad_r * PT), int(pad_b * PT)
 
         p_xml_list: list[str] = []
-        for text, font, size_pt, color_hex, is_bold in paragraphs:
-            lines = text.split("\n")
-            for line in lines:
-                sz = int(size_pt * 100)
-                b_attr = ' b="1"' if is_bold else ' b="0"'
-                escaped = escape(line)
-                p_xml_list.append(
-                    f"""<a:p>
-  <a:pPr algn="l"><a:lnSpc><a:spcPct val="120000"/></a:lnSpc></a:pPr>
+        for para in paragraphs:
+            runs: list[RunSpec] = [para] if isinstance(para, tuple) else para
+            # If a single run contains newlines, split into multiple paragraphs
+            if len(runs) == 1 and "\n" in runs[0][0]:
+                text, font, size_pt, color_hex, is_bold = runs[0]
+                for line in text.split("\n"):
+                    sz = int(size_pt * 100)
+                    b_attr = ' b="1"' if is_bold else ' b="0"'
+                    p_xml_list.append(
+                        f"""<a:p>
+  <a:pPr algn="{align}"><a:lnSpc><a:spcPct val="{line_spacing_pct}"/></a:lnSpc></a:pPr>
   <a:r>
     <a:rPr lang="en-US" sz="{sz}"{b_attr} dirty="0">
       <a:solidFill><a:srgbClr val="{_hex(color_hex)}"/></a:solidFill>
       <a:latin typeface="{escape(font)}"/>
       <a:cs typeface="{escape(font)}"/>
     </a:rPr>
-    <a:t>{escaped}</a:t>
+    <a:t>{escape(line)}</a:t>
   </a:r>
+</a:p>"""
+                    )
+            else:
+                r_xml_parts: list[str] = []
+                for text, font, size_pt, color_hex, is_bold in runs:
+                    sz = int(size_pt * 100)
+                    b_attr = ' b="1"' if is_bold else ' b="0"'
+                    r_xml_parts.append(
+                        f"""  <a:r>
+    <a:rPr lang="en-US" sz="{sz}"{b_attr} dirty="0">
+      <a:solidFill><a:srgbClr val="{_hex(color_hex)}"/></a:solidFill>
+      <a:latin typeface="{escape(font)}"/>
+      <a:cs typeface="{escape(font)}"/>
+    </a:rPr>
+    <a:t>{escape(text)}</a:t>
+  </a:r>"""
+                    )
+                p_xml_list.append(
+                    f"""<a:p>
+  <a:pPr algn="{align}"><a:lnSpc><a:spcPct val="{line_spacing_pct}"/></a:lnSpc></a:pPr>
+{chr(10).join(r_xml_parts)}
 </a:p>"""
                 )
 
@@ -122,7 +165,7 @@ class SlideBuilder:
         self.shapes.append(
             f"""<p:sp>
   <p:nvSpPr>
-    <p:cNvPr id="{sid}" name="TextBox {sid}"/>
+    <p:cNvPr id="{sid}" name="Box {sid}"/>
     <p:cNvSpPr txBox="1"/>
     <p:nvPr/>
   </p:nvSpPr>
@@ -133,7 +176,7 @@ class SlideBuilder:
     {ln_xml}
   </p:spPr>
   <p:txBody>
-    <a:bodyPr wrap="square" lIns="{pad}" tIns="{pad}" rIns="{pad}" bIns="{pad}" anchor="t"/>
+    <a:bodyPr wrap="square" lIns="{l_ins}" tIns="{t_ins}" rIns="{r_ins}" bIns="{b_ins}" anchor="{valign}"/>
     <a:lstStyle/>
     {body_p}
   </p:txBody>
@@ -143,7 +186,7 @@ class SlideBuilder:
     def add_four_color_bar(self) -> None:
         colors = ["4285F4", "EA4335", "FBBC04", "34A853"]
         for i, c in enumerate(colors):
-            self.add_rect(i * 240, 0, 240, 6, c)
+            self.add_rect(i * 240, 0, 240, 5, c)
 
     def add_header(
         self,
@@ -155,127 +198,46 @@ class SlideBuilder:
         slide_num: str,
     ) -> None:
         self.add_four_color_bar()
-        self.add_textbox(
-            48, 22, 600, 24,
-            [(eyebrow.upper(), "Google Sans", 10, eyebrow_color, True)],
-            pad_pt=2,
+        self.add_box(
+            48, 20, 680, 22,
+            [(eyebrow.upper(), "Google Sans", 9.5, eyebrow_color, True)],
+            pad_l=0, pad_t=0, pad_r=0, pad_b=0,
         )
-        self.add_textbox(
-            840, 22, 72, 24,
-            [(slide_num, "Google Sans Mono", 10, "9AA0A6" if is_dark else "5F6368", False)],
-            pad_pt=2,
+        self.add_box(
+            850, 20, 62, 22,
+            [(slide_num, "Google Sans Mono", 9.5, "9AA0A6" if is_dark else "5F6368", False)],
+            pad_l=0, pad_t=0, pad_r=0, pad_b=0, align="r",
         )
-        self.add_textbox(
-            48, 46, 864, 48,
-            [(title, "Google Sans Display", 28, "FFFFFF" if is_dark else "202124", True)],
-            pad_pt=2,
+        self.add_box(
+            48, 42, 864, 42,
+            [(title, "Google Sans Display", 26, "FFFFFF" if is_dark else "202124", True)],
+            pad_l=0, pad_t=0, pad_r=0, pad_b=0,
         )
-        self.add_textbox(
-            48, 92, 864, 34,
-            [(subtitle, "Google Sans Text", 13, "BDC1C6" if is_dark else "5F6368", False)],
-            pad_pt=2,
-        )
+        if subtitle:
+            self.add_box(
+                48, 82, 864, 28,
+                [(subtitle, "Google Sans Text", 12.5, "BDC1C6" if is_dark else "5F6368", False)],
+                pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+            )
 
-    def add_bento_card(
-        self,
-        x_pt: float,
-        y_pt: float,
-        w_pt: float,
-        h_pt: float,
-        bg_hex: str,
-        border_hex: str,
-        kicker: str,
-        kicker_color: str,
-        heading: str,
-        heading_color: str,
-        body: str,
-        body_color: str,
-    ) -> None:
-        self.add_textbox(
-            x_pt,
-            y_pt,
-            w_pt,
-            h_pt,
-            [
-                (kicker, "Google Sans Mono", 9, kicker_color, True),
-                (heading, "Google Sans Display", 17, heading_color, True),
-                ("", "Google Sans Text", 6, body_color, False),
-                (body, "Google Sans Text", 11, body_color, False),
-            ],
-            fill_hex=bg_hex,
-            border_hex=border_hex,
-            rounded=True,
-            pad_pt=14,
+    def add_footer(self, is_dark: bool, left_text: str, right_text: str, right_color: str | None = None) -> None:
+        line_color = "2D3343" if is_dark else "DADCE0"
+        txt_color = "9AA0A6" if is_dark else "5F6368"
+        r_color = right_color or txt_color
+        self.add_rect(48, 492, 864, 1, line_color)
+        self.add_box(
+            48, 498, 560, 24,
+            [(left_text, "Google Sans Text", 9.5, txt_color, False)],
+            pad_l=0, pad_t=0, pad_r=0, pad_b=0,
         )
-
-    def add_code_card(
-        self,
-        x_pt: float,
-        y_pt: float,
-        w_pt: float,
-        h_pt: float,
-        title: str,
-        title_color: str,
-        code_text: str,
-    ) -> None:
-        self.add_textbox(
-            x_pt,
-            y_pt,
-            w_pt,
-            h_pt,
-            [
-                (title, "Google Sans", 10, title_color, True),
-                ("", "Google Sans Mono", 4, "E8EAED", False),
-                (code_text, "Google Sans Mono", 10, "E8EAED", False),
-            ],
-            fill_hex="131314",
-            border_hex="3C4043",
-            rounded=True,
-            pad_pt=14,
+        self.add_box(
+            610, 498, 302, 24,
+            [(right_text, "Google Sans Mono", 9.5, r_color, True)],
+            pad_l=0, pad_t=0, pad_r=0, pad_b=0, align="r",
         )
 
     def to_xml(self) -> str:
         shapes_xml = "\n".join(self.shapes)
-        anim_nodes: list[str] = []
-        ctn_id = 3
-        for idx, shape_id in enumerate(range(6, self._id)):
-            delay_ms = idx * 180
-            c1 = ctn_id
-            c2 = ctn_id + 1
-            c3 = ctn_id + 2
-            c4 = ctn_id + 3
-            ctn_id += 4
-            anim_nodes.append(
-                f"""              <p:par>
-                <p:cTn id="{c1}" fill="hold">
-                  <p:stCondLst><p:cond delay="{delay_ms}"/></p:stCondLst>
-                  <p:childTnLst>
-                    <p:par>
-                      <p:cTn id="{c2}" presetID="10" presetClass="entr" presetSubtype="0" fill="hold" nodeType="withEffect">
-                        <p:stCondLst><p:cond delay="0"/></p:stCondLst>
-                        <p:childTnLst>
-                          <p:set>
-                            <p:cBhvr>
-                              <p:cTn id="{c3}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>
-                              <p:tgtEl><p:spTgt spid="{shape_id}"/></p:tgtEl>
-                              <p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst>
-                            </p:cBhvr>
-                            <p:to><p:strVal val="visible"/></p:to>
-                          </p:set>
-                          <p:animEffect transition="in" filter="fade">
-                            <p:cBhvr>
-                              <p:cTn id="{c4}" dur="450"/>
-                              <p:tgtEl><p:spTgt spid="{shape_id}"/></p:tgtEl>
-                            </p:cBhvr>
-                          </p:animEffect>
-                        </p:childTnLst>
-                      </p:cTn>
-                    </p:par>
-                  </p:childTnLst>
-                </p:cTn>
-              </p:par>"""
-            )
-        anim_xml = "\n".join(anim_nodes)
         return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -306,68 +268,81 @@ class SlideBuilder:
   </p:cSld>
   <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
   <p:transition spd="med"><p:fade/></p:transition>
-  <p:timing>
-    <p:tnLst>
-      <p:par>
-        <p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot">
-          <p:childTnLst>
-            <p:seq concurrent="1" nextAc="seek">
-              <p:cTn id="2" dur="indefinite" nodeType="mainSeq">
-                <p:childTnLst>
-{anim_xml}
-                </p:childTnLst>
-              </p:cTn>
-              <p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>
-              <p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst>
-            </p:seq>
-          </p:childTnLst>
-        </p:cTn>
-      </p:par>
-    </p:tnLst>
-  </p:timing>
 </p:sld>"""
 
 
 def build_slides() -> list[SlideBuilder]:
     slides: list[SlideBuilder] = []
 
-    # SLIDE 1: Hero Opening (Dark Stage)
+    # =========================================================================
+    # SLIDE 01: Hero Opening (Dark Stage #0E1015)
+    # =========================================================================
     s1 = SlideBuilder("0E1015")
     s1.add_four_color_bar()
-    s1.add_textbox(
-        56, 56, 700, 28,
-        [("GOOGLE CLOUD NEXT '27  |  DEVELOPER SESSION  |  AGENTS CLI v1.8+", "Google Sans Mono", 11, "8AB4F8", True)],
+    # Top Pill Badge
+    s1.add_box(
+        56, 36, 290, 26,
+        [("Google Cloud Next '27  •  Developer Session", "Google Sans", 9.5, "8AB4F8", True)],
+        fill_hex="162038", border_hex="3B5998", rounded=True, adj=50000,
+        pad_l=12, pad_t=4, pad_r=12, pad_b=4, align="c", valign="ctr",
     )
-    s1.add_textbox(
-        56, 115, 848, 145,
+    s1.add_box(
+        358, 36, 130, 26,
+        [("agents-cli v1.8+", "Google Sans Mono", 9.5, "9AA0A6", False)],
+        pad_l=4, pad_t=4, pad_r=4, pad_b=4, valign="ctr",
+    )
+    s1.add_box(
+        840, 36, 64, 26,
+        [("01 / 10", "Google Sans Mono", 9.5, "9AA0A6", False)],
+        pad_l=0, pad_t=4, pad_r=0, pad_b=4, align="r", valign="ctr",
+    )
+    s1.add_box(
+        56, 118, 600, 24,
+        [("POWERING THE AGENT DEVELOPMENT LIFECYCLE", "Google Sans", 11, "8AB4F8", True)],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+    s1.add_box(
+        56, 148, 848, 135,
         [
-            ("Every agent framework.", "Google Sans Display", 46, "FFFFFF", True),
-            ("One production lifecycle.", "Google Sans Display", 46, "8AB4F8", True),
+            ("Every agent framework.", "Google Sans Display", 44, "FFFFFF", True),
+            [
+                ("One ", "Google Sans Display", 44, "4285F4", True),
+                ("production ", "Google Sans Display", 44, "9B72CB", True),
+                ("lifecycle.", "Google Sans Display", 44, "D96570", True),
+            ],
         ],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0, line_spacing_pct=110000,
     )
-    s1.add_textbox(
-        56, 275, 820, 75,
+    s1.add_box(
+        56, 295, 760, 70,
         [
             (
                 "Running LangChain, LangGraph, and custom enterprise governance policies natively on Google Cloud with the Agents CLI Extension System.",
                 "Google Sans Text",
-                17,
+                16,
                 "BDC1C6",
                 False,
             )
         ],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0, line_spacing_pct=130000,
     )
-    s1.add_textbox(
-        56, 455, 848, 38,
-        [("Live Repo: github.com/sanketbisne/scalfod-langgraph-agentscli", "Google Sans Mono", 12, "81C995", True)],
-        fill_hex="161922",
-        border_hex="2D3343",
-        rounded=True,
-        pad_pt=10,
+    s1.add_rect(56, 465, 848, 1, "2D3343")
+    s1.add_box(
+        56, 480, 430, 30,
+        [("github.com/sanketbisne/scalfod-langgraph-agentscli", "Google Sans Mono", 10, "FFFFFF", False)],
+        fill_hex="1F2430", border_hex="2D3343", rounded=True, adj=20000,
+        pad_l=12, pad_t=5, pad_r=12, pad_b=5, valign="ctr",
+    )
+    s1.add_box(
+        600, 480, 304, 30,
+        [("Google Cloud AI & Developer Platform", "Google Sans", 10, "9AA0A6", False)],
+        pad_l=0, pad_t=6, pad_r=0, pad_b=4, align="r", valign="ctr",
     )
     slides.append(s1)
 
-    # SLIDE 2: Big Numbers Impact Slide (Dark Stage)
+    # =========================================================================
+    # SLIDE 02: By The Numbers (Dark Stage #0E1015)
+    # =========================================================================
     s2 = SlideBuilder("0E1015")
     s2.add_header(
         True,
@@ -377,349 +352,567 @@ def build_slides() -> list[SlideBuilder]:
         "Out of 24 CLI commands, 18 are framework-agnostic and only 6 touch the agent runtime.",
         "02 / 10",
     )
-    s2.add_bento_card(
-        48, 145, 276, 330, "161922", "2D3343",
-        "PRODUCTION LIFECYCLE", "8AB4F8",
-        "18+ Native Commands", "FFFFFF",
-        "deploy, eval grade, eval compare, infra, scaffold, lint, and login work unchanged across ADK, LangChain, and LangGraph.",
-        "9AA0A6",
+    # 3 Big Number Cards
+    s2.add_box(
+        48, 130, 276, 340,
+        [
+            ("18+", "Google Sans Display", 52, "8AB4F8", True),
+            ("", "Google Sans Text", 6, "FFFFFF", False),
+            ("Framework-Agnostic Commands", "Google Sans", 14, "FFFFFF", True),
+            ("", "Google Sans Text", 6, "9AA0A6", False),
+            (
+                "deploy, eval grade, eval compare, infra, scaffold, lint, and login work unchanged across ADK, LangChain, and LangGraph.",
+                "Google Sans Text",
+                11,
+                "9AA0A6",
+                False,
+            ),
+        ],
+        fill_hex="161922", border_hex="2D3343", rounded=True, pad_l=20, pad_t=22, pad_r=20, pad_b=20,
     )
-    s2.add_bento_card(
-        342, 145, 276, 330, "161922", "2D3343",
-        "RUNTIME INTERCEPTION", "81C995",
-        "6 Overridden Commands", "FFFFFF",
-        "run, playground, eval.generate, and publish hot-swap via a single agents-cli-extension.yaml manifest.",
-        "9AA0A6",
+    s2.add_box(
+        342, 130, 276, 340,
+        [
+            ("6", "Google Sans Display", 52, "81C995", True),
+            ("", "Google Sans Text", 6, "FFFFFF", False),
+            ("Runtime Overrides", "Google Sans", 14, "FFFFFF", True),
+            ("", "Google Sans Text", 6, "9AA0A6", False),
+            (
+                "run, playground, and eval.generate hot-swap via a single agents-cli-extension.yaml manifest at the project root.",
+                "Google Sans Text",
+                11,
+                "9AA0A6",
+                False,
+            ),
+        ],
+        fill_hex="161922", border_hex="2D3343", rounded=True, pad_l=20, pad_t=22, pad_r=20, pad_b=20,
     )
-    s2.add_bento_card(
-        636, 145, 276, 330, "161922", "2D3343",
-        "PURE LANGGRAPH", "FDD663",
-        "0% ADK Lock-In", "FFFFFF",
-        "Zero google-adk dependency required in pyproject.toml. Pure LangChain and LangGraph code in production.",
-        "9AA0A6",
+    s2.add_box(
+        636, 130, 276, 340,
+        [
+            ("0%", "Google Sans Display", 52, "FDD663", True),
+            ("", "Google Sans Text", 6, "FFFFFF", False),
+            ("Framework Lock-In", "Google Sans", 14, "FFFFFF", True),
+            ("", "Google Sans Text", 6, "9AA0A6", False),
+            (
+                "Zero google-adk dependency required in pyproject.toml. Pure LangChain and LangGraph code in production.",
+                "Google Sans Text",
+                11,
+                "9AA0A6",
+                False,
+            ),
+        ],
+        fill_hex="161922", border_hex="2D3343", rounded=True, pad_l=20, pad_t=22, pad_r=20, pad_b=20,
+    )
+    s2.add_footer(
+        True,
+        "Available starting in Agents CLI v1.5+ (Extension System) & v1.8+ (LangChain Template)",
+        "google/agents-cli",
+        "8AB4F8",
     )
     slides.append(s2)
 
-    # SLIDE 3: The Framework Lock-In Problem (Light Stage)
+    # =========================================================================
+    # SLIDE 03: The Framework Lock-In Problem (Light Stage #FFFFFF)
+    # =========================================================================
     s3 = SlideBuilder("FFFFFF")
     s3.add_header(
         False,
         "The Framework Lock-In Problem",
         "1A73E8",
         "Ending the tradeoff between velocity and choice.",
-        "Teams want Google Cloud deployment, Vertex AI evaluation, and A2A serving without rewriting LangGraph agents.",
+        "How teams previously adapted opinionated agent toolchains vs. the Agents CLI Extension System:",
         "03 / 10",
     )
-    s3.add_bento_card(
-        48, 145, 276, 330, "F8F9FA", "DADCE0",
-        "LEGACY PATH 1", "C5221F",
-        "Forking the CLI", "202124",
-        "Maintain a divergent internal copy and manually rebase on every upstream release.\n\nResult: Permanent maintenance tax.",
-        "5F6368",
+    # Card 1
+    s3.add_rect(48, 130, 276, 340, "F8F9FA", "DADCE0", rounded=True)
+    s3.add_box(
+        66, 150, 110, 24,
+        [("Legacy Path 1", "Google Sans", 9.5, "C5221F", True)],
+        fill_hex="FCE8E6", rounded=True, adj=20000, pad_l=8, pad_t=3, pad_r=8, pad_b=3, align="c", valign="ctr",
     )
-    s3.add_bento_card(
-        342, 145, 276, 330, "F8F9FA", "DADCE0",
-        "LEGACY PATH 2", "B06000",
-        "Custom Wrapper Scripts", "202124",
-        "Build parallel shell scripts around the CLI. Developers and coding agents call native CLI directly.\n\nResult: Bypassed governance gates.",
-        "5F6368",
+    s3.add_box(
+        66, 186, 240, 200,
+        [
+            ("Forking the CLI", "Google Sans", 16, "202124", True),
+            ("", "Google Sans Text", 6, "5F6368", False),
+            (
+                "Maintain a divergent internal copy and manually rebase on every upstream release.",
+                "Google Sans Text",
+                11,
+                "5F6368",
+                False,
+            ),
+        ],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
     )
-    s3.add_bento_card(
-        636, 145, 276, 330, "E8F0FE", "1A73E8",
-        "CLOUD NEXT '27 STANDARD", "1A73E8",
-        "Agents CLI Extensions", "202124",
-        "Declarative agents-cli-extension.yaml overrides commands in-place, pinned by exact Git commit SHA.\n\nResult: Zero fork + 100% enforcement.",
-        "202124",
+    s3.add_rect(66, 412, 240, 1, "DADCE0")
+    s3.add_box(
+        66, 422, 240, 28,
+        [("Result: Permanent maintenance tax", "Google Sans Mono", 9.5, "C5221F", True)],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+
+    # Card 2
+    s3.add_rect(342, 130, 276, 340, "F8F9FA", "DADCE0", rounded=True)
+    s3.add_box(
+        360, 150, 110, 24,
+        [("Legacy Path 2", "Google Sans", 9.5, "B06000", True)],
+        fill_hex="FEF7E0", rounded=True, adj=20000, pad_l=8, pad_t=3, pad_r=8, pad_b=3, align="c", valign="ctr",
+    )
+    s3.add_box(
+        360, 186, 240, 200,
+        [
+            ("Custom Wrapper Scripts", "Google Sans", 16, "202124", True),
+            ("", "Google Sans Text", 6, "5F6368", False),
+            (
+                "Build parallel shell scripts around the CLI. Developers and coding agents call the native CLI directly and bypass policies.",
+                "Google Sans Text",
+                11,
+                "5F6368",
+                False,
+            ),
+        ],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+    s3.add_rect(360, 412, 240, 1, "DADCE0")
+    s3.add_box(
+        360, 422, 240, 28,
+        [("Result: Bypassed governance gates", "Google Sans Mono", 9.5, "B06000", True)],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+
+    # Card 3 (Highlighted Blue)
+    s3.add_rect(636, 130, 276, 340, "E8F0FE", "1A73E8", border_w_pt=2.0, rounded=True)
+    s3.add_box(
+        654, 150, 155, 24,
+        [("Cloud Next '27 Standard", "Google Sans", 9.5, "FFFFFF", True)],
+        fill_hex="1A73E8", rounded=True, adj=20000, pad_l=8, pad_t=3, pad_r=8, pad_b=3, align="c", valign="ctr",
+    )
+    s3.add_box(
+        654, 186, 240, 200,
+        [
+            ("Agents CLI Extensions", "Google Sans", 16, "202124", True),
+            ("", "Google Sans Text", 6, "3C4043", False),
+            (
+                "Declarative agents-cli-extension.yaml overrides commands in-place, pinned by Git commit SHA.",
+                "Google Sans Text",
+                11,
+                "3C4043",
+                False,
+            ),
+        ],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+    s3.add_rect(654, 412, 240, 1, "AECBFA")
+    s3.add_box(
+        654, 422, 240, 28,
+        [("Result: Zero fork + 100% enforcement", "Google Sans Mono", 9.5, "137333", True)],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+    s3.add_footer(
+        False,
+        "Distributed directly via Git repositories with zero external registry required",
+        "schema: agents-cli-extension/v1alpha1",
     )
     slides.append(s3)
 
-    # SLIDE 4: Inside the Command Surface (6 vs. 18 Split)
+    # =========================================================================
+    # SLIDE 04: 3-Layer Stack Cake - 6 vs 18 Split (Light Stage #FFFFFF)
+    # =========================================================================
     s4 = SlideBuilder("FFFFFF")
     s4.add_header(
         False,
-        "Command Surface Architecture",
+        "Inside the Command Surface (6 vs. 18 Split)",
         "137333",
-        "Inside the Agents CLI Command Surface (6 vs. 18 Split)",
+        "One unified command surface across the stack.",
         "A single agents-cli-extension.yaml swaps only the 6 runtime commands and keeps the 18 production commands intact.",
         "04 / 10",
     )
-    s4.add_bento_card(
-        48, 145, 420, 330, "F8FAFF", "4285F4",
-        "[↑ LANGCHAIN] OVERRIDES", "1967D2",
-        "6 Framework-Coupled Commands", "202124",
-        "- run -> uv run python scripts/run.py\n"
-        "- playground -> uv run langgraph dev --port 8080\n"
-        "- eval.generate -> uv run python scripts/eval_generate.py\n"
-        "- publish.gemini-enterprise -> scripts/publish.py\n"
-        "- eval.dataset / eval.optimize -> Clean refusal wrapper",
-        "3C4043",
+    # Layer 1: Authoring Layer
+    s4.add_rect(48, 122, 864, 92, "F8F9FA", "DADCE0", rounded=True, adj=8000)
+    s4.add_box(
+        64, 130, 500, 20,
+        [("1. AGENT AUTHORING LAYER (BRING YOUR OWN FRAMEWORK)", "Google Sans", 9, "5F6368", True)],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
     )
-    s4.add_bento_card(
-        492, 145, 420, 330, "F6FEF8", "34A853",
-        "NATIVE BUILT-IN COMMANDS", "137333",
-        "18+ Framework-Agnostic Commands", "202124",
-        "- deploy (Cloud Run / GKE via FastAPI A2A)\n"
-        "- eval grade / eval compare / eval analyze (Vertex AI)\n"
-        "- infra (Terraform modules)\n"
-        "- scaffold create / enhance / upgrade\n"
-        "- extension add / list / update / remove\n"
-        "- install / info / lint / login",
-        "3C4043",
+    fw_items = [
+        ("LangChain 1.0+", "E8F0FE", "1A73E8", "1967D2"),
+        ("LangGraph StateGraph", "E8F0FE", "1A73E8", "1967D2"),
+        ("Deep Agents", "FFFFFF", "DADCE0", "202124"),
+        ("Google ADK (Python / Go)", "FFFFFF", "DADCE0", "202124"),
+    ]
+    for i, (label, bg, brd, col) in enumerate(fw_items):
+        s4.add_box(
+            64 + i * 210, 156, 198, 42,
+            [(label, "Google Sans", 10.5, col, True)],
+            fill_hex=bg, border_hex=brd, border_w_pt=1.5, rounded=True, adj=15000,
+            align="c", valign="ctr",
+        )
+
+    # Layer 2: 6 Overridden vs 18+ Native
+    s4.add_box(
+        48, 226, 424, 140,
+        [
+            [
+                ("6 Overridden Runtime Commands   ", "Google Sans", 12, "1967D2", True),
+                ("[↑ langchain]", "Google Sans Mono", 10, "1967D2", True),
+            ],
+            ("", "Google Sans Text", 4, "3C4043", False),
+            ("• run -> uv run python scripts/run.py", "Google Sans Mono", 9.5, "3C4043", False),
+            ("• playground -> uv run langgraph dev --port 8080", "Google Sans Mono", 9.5, "3C4043", False),
+            ("• eval.generate -> uv run python scripts/eval_generate.py", "Google Sans Mono", 9.5, "3C4043", False),
+            ("• publish.gemini-enterprise & eval.dataset / optimize", "Google Sans Mono", 9.5, "3C4043", False),
+        ],
+        fill_hex="F8FAFF", border_hex="4285F4", border_w_pt=2.0, rounded=True, adj=8000,
+        pad_l=16, pad_t=12, pad_r=16, pad_b=12,
+    )
+    s4.add_box(
+        488, 226, 424, 140,
+        [
+            [
+                ("18+ Native Production Commands   ", "Google Sans", 12, "137333", True),
+                ("[Built-In]", "Google Sans Mono", 10, "137333", True),
+            ],
+            ("", "Google Sans Text", 4, "3C4043", False),
+            ("• deploy (Cloud Run / GKE via FastAPI A2A)", "Google Sans Mono", 9.5, "3C4043", False),
+            ("• eval grade / eval compare / eval analyze (Vertex AI)", "Google Sans Mono", 9.5, "3C4043", False),
+            ("• infra (Terraform) & scaffold create / enhance / upgrade", "Google Sans Mono", 9.5, "3C4043", False),
+            ("• extension add / list / update & install / info / lint", "Google Sans Mono", 9.5, "3C4043", False),
+        ],
+        fill_hex="F6FEF8", border_hex="34A853", border_w_pt=2.0, rounded=True, adj=8000,
+        pad_l=16, pad_t=12, pad_r=16, pad_b=12,
+    )
+
+    # Layer 3: Google Cloud Production Foundation
+    s4.add_rect(48, 378, 864, 96, "202124", rounded=True, adj=8000)
+    s4.add_box(
+        64, 386, 500, 20,
+        [("3. GOOGLE CLOUD PRODUCTION FOUNDATION", "Google Sans", 9, "8AB4F8", True)],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+    foundation_items = [
+        "Cloud Run (FastAPI A2A)",
+        "Vertex AI Eval Service",
+        "Gemini on Vertex AI",
+        "Cloud Trace & Logging",
+    ]
+    for i, label in enumerate(foundation_items):
+        s4.add_box(
+            64 + i * 210, 412, 198, 44,
+            [(label, "Google Sans Mono", 9.5, "FFFFFF", False)],
+            fill_hex="2D3136", rounded=True, adj=15000, align="c", valign="ctr",
+        )
+    s4.add_footer(
+        False,
+        "Same Dockerfile CMD & FastAPI A2A contract across every framework",
+        "app.fast_api_app:app",
     )
     slides.append(s4)
 
-    # SLIDE 5: Act 1 - Scaffolding a Pure LangChain / LangGraph Project
+    # =========================================================================
+    # SLIDE 05: Live Demo Act 1 - Scaffolding (Dark Stage #0E1015)
+    # =========================================================================
     s5 = SlideBuilder("0E1015")
     s5.add_header(
         True,
-        "Live Demo | Act 1",
+        "Live Demo  •  Act 1",
         "8AB4F8",
         "Scaffold a pure LangGraph project in one command.",
-        "Scaffolding and extension installation happen together with zero google-adk dependency.",
+        "Scaffolding and extension installation happen together. Nothing needs to be installed globally.",
         "05 / 10",
     )
-    s5.add_code_card(
-        48, 145, 864, 330,
-        "TERMINAL  |  SCAFFOLD & VERIFY ZERO ADK LOCK-IN",
-        "8AB4F8",
-        "# 1. Scaffold directly from the first-party LangChain extension template\n"
-        "$ agents-cli create scalfod-langgraph-agentscli \\\n"
-        "    --agent google/agents-cli/extensions/langchain/template@v1.8.0 \\\n"
-        "    -d cloud_run\n\n"
-        "$ cd scalfod-langgraph-agentscli && agents-cli install\n"
-        "Agents CLI v1.8.0 | Fetching remote template: google/agents-cli/extensions/langchain/template@v1.8.0\n"
-        "> Connected to project: your-project | Your agent project is ready.\n\n"
-        "# 2. Verify zero google-adk dependency in pyproject.toml and app/\n"
-        "$ grep -r \"google.adk\\|google-adk\" pyproject.toml app/ ; echo \"exit: $?\"\n"
-        "exit: 1   # Verified: Zero google-adk dependency!",
+    s5.add_box(
+        48, 130, 864, 340,
+        [
+            ("# 1. Scaffold directly from the first-party LangChain template", "Google Sans Mono", 11, "8AB4F8", False),
+            ("$ agents-cli create scalfod-langgraph-agentscli \\", "Google Sans Mono", 11, "E8EAED", False),
+            ("    --agent google/agents-cli/extensions/langchain/template@v1.8.0 \\", "Google Sans Mono", 11, "E8EAED", False),
+            ("    -d cloud_run", "Google Sans Mono", 11, "E8EAED", False),
+            ("", "Google Sans Mono", 6, "E8EAED", False),
+            ("$ cd scalfod-langgraph-agentscli && agents-cli install", "Google Sans Mono", 11, "E8EAED", False),
+            ("Agents CLI v1.8.0 • Fetching remote template: google/agents-cli/extensions/langchain/template@v1.8.0", "Google Sans Mono", 11, "81C995", False),
+            ("> ✓ Connected to project: your-project • Your agent project is ready.", "Google Sans Mono", 11, "81C995", False),
+            ("", "Google Sans Mono", 6, "E8EAED", False),
+            ("# 2. Prove zero google-adk dependency in pyproject.toml and app/", "Google Sans Mono", 11, "8AB4F8", False),
+            ('$ grep -r "google.adk\\|google-adk" pyproject.toml app/ ; echo "exit: $?"', "Google Sans Mono", 11, "E8EAED", False),
+            ("exit: 1   # Zero google-adk dependency verified!", "Google Sans Mono", 11, "FDD663", True),
+        ],
+        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=22, pad_t=20, pad_r=22, pad_b=20,
+    )
+    s5.add_footer(
+        True,
+        "Auto-loaded via ./agents-cli-extension.yaml at project root",
+        "Zero ADK Dependency Verified",
+        "81C995",
     )
     slides.append(s5)
 
-    # SLIDE 6: Project Structure & LangGraph State Graph
+    # =========================================================================
+    # SLIDE 06: Project Structure & CompiledStateGraph (Light Stage #FFFFFF)
+    # =========================================================================
     s6 = SlideBuilder("FFFFFF")
     s6.add_header(
         False,
         "Codebase Architecture",
         "B06000",
-        "Project Structure & LangGraph CompiledStateGraph",
+        "One graph representation: CompiledStateGraph",
         "In LangChain 1.0+, create_agent compiles directly into a LangGraph CompiledStateGraph.",
         "06 / 10",
     )
-    s6.add_code_card(
-        48, 145, 420, 330,
-        "PROJECT STRUCTURE",
-        "FDD663",
-        "scalfod-langgraph-agentscli/\n"
-        "├── agents-cli-extension.yaml  # Project overrides\n"
-        "├── agents-cli-manifest.yaml   # Target: cloud_run\n"
-        "├── langgraph.json             # LangGraph Studio\n"
-        "├── pyproject.toml             # Zero google-adk\n"
-        "├── Dockerfile                 # FastAPI A2A :8080\n"
-        "├── app/\n"
-        "│   ├── agent.py               # CompiledStateGraph\n"
-        "│   ├── tools.py               # DeepCite tools\n"
-        "│   ├── fast_api_app.py        # FastAPI A2A server\n"
-        "│   └── app_utils/a2a.py       # /.well-known/agent.json\n"
-        "└── extensions/sbom-deploy/    # Custom SBOM gate",
+    s6.add_box(
+        48, 130, 420, 340,
+        [
+            ("Project Tree", "Google Sans", 11, "8AB4F8", True),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("scalfod-langgraph-agentscli/", "Google Sans Mono", 10, "E8EAED", False),
+            ([("├── ", "Google Sans Mono", 10, "E8EAED", False), ("agents-cli-extension.yaml", "Google Sans Mono", 10, "FDD663", True), ("  # Overrides", "Google Sans Mono", 10, "9AA0A6", False)]),
+            ("├── agents-cli-manifest.yaml   # cloud_run", "Google Sans Mono", 10, "E8EAED", False),
+            ([("├── ", "Google Sans Mono", 10, "E8EAED", False), ("langgraph.json", "Google Sans Mono", 10, "FDD663", True), ("             # Studio config", "Google Sans Mono", 10, "9AA0A6", False)]),
+            ("├── pyproject.toml             # langchain", "Google Sans Mono", 10, "E8EAED", False),
+            ("├── Dockerfile                 # FastAPI :8080", "Google Sans Mono", 10, "E8EAED", False),
+            ("├── app/", "Google Sans Mono", 10, "E8EAED", False),
+            ([("│   ├── ", "Google Sans Mono", 10, "E8EAED", False), ("agent.py", "Google Sans Mono", 10, "81C995", True), ("               # StateGraph", "Google Sans Mono", 10, "9AA0A6", False)]),
+            ([("│   ├── ", "Google Sans Mono", 10, "E8EAED", False), ("tools.py", "Google Sans Mono", 10, "81C995", True), ("               # DeepCite tools", "Google Sans Mono", 10, "9AA0A6", False)]),
+            ("│   ├── fast_api_app.py        # A2A server", "Google Sans Mono", 10, "E8EAED", False),
+            ("│   └── app_utils/a2a.py       # agent.json", "Google Sans Mono", 10, "E8EAED", False),
+            ("└── extensions/sbom-deploy/    # SBOM gate", "Google Sans Mono", 10, "E8EAED", False),
+        ],
+        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=18, pad_t=16, pad_r=18, pad_b=16,
     )
-    s6.add_code_card(
-        492, 145, 420, 330,
-        "app/agent.py",
-        "81C995",
-        "from langchain.agents import create_agent\n"
-        "from langchain_google_genai import ChatGoogleGenerativeAI\n"
-        "from langgraph.graph.state import CompiledStateGraph\n\n"
-        "llm = ChatGoogleGenerativeAI(\n"
-        "    model=\"gemini-2.5-flash\", temperature=0\n"
-        ")\n\n"
-        "root_agent: CompiledStateGraph = create_agent(\n"
-        "    model=llm,\n"
-        "    tools=[\n"
-        "        create_research_plan,\n"
-        "        search_curated_kb,\n"
-        "        search_arxiv_papers,\n"
-        "        critique_research_draft,\n"
-        "    ],\n"
-        "    system_prompt=SYSTEM_PROMPT,\n"
-        ")",
+    s6.add_box(
+        492, 130, 420, 340,
+        [
+            ("app/agent.py", "Google Sans", 11, "81C995", True),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("from langchain.agents import create_agent", "Google Sans Mono", 10, "8AB4F8", False),
+            ("from langchain_google_genai import ChatGoogleGenerativeAI", "Google Sans Mono", 10, "8AB4F8", False),
+            ("from langgraph.graph.state import CompiledStateGraph", "Google Sans Mono", 10, "8AB4F8", False),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("llm = ChatGoogleGenerativeAI(", "Google Sans Mono", 10, "E8EAED", False),
+            ('    model="gemini-2.5-flash", temperature=0', "Google Sans Mono", 10, "FDD663", False),
+            (")", "Google Sans Mono", 10, "E8EAED", False),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("root_agent: CompiledStateGraph = create_agent(", "Google Sans Mono", 10, "81C995", True),
+            ("    model=llm,", "Google Sans Mono", 10, "E8EAED", False),
+            ("    tools=[create_research_plan, search_curated_kb,", "Google Sans Mono", 10, "E8EAED", False),
+            ("           search_arxiv_papers, critique_research_draft],", "Google Sans Mono", 10, "E8EAED", False),
+            ("    system_prompt=SYSTEM_PROMPT,", "Google Sans Mono", 10, "E8EAED", False),
+            (")", "Google Sans Mono", 10, "81C995", True),
+        ],
+        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=18, pad_t=16, pad_r=18, pad_b=16,
+    )
+    s6.add_footer(
+        False,
+        "Authenticates automatically via Application Default Credentials (ADC) on Vertex AI",
+        "GOOGLE_GENAI_USE_VERTEXAI=True",
     )
     slides.append(s6)
 
-    # SLIDE 7: DeepCite Agent Architecture (Plan -> Search -> Critique -> Report)
+    # =========================================================================
+    # SLIDE 07: DeepCite Research & Critique Loop (Light Stage #FFFFFF)
+    # =========================================================================
     s7 = SlideBuilder("FFFFFF")
     s7.add_header(
         False,
-        "Reference Workload",
+        "DeepCite Reference Workload",
         "1A73E8",
-        "DeepCite Architecture (Plan -> Search -> Critique -> Report)",
-        "Iterative self-reflection loop that enforces multi-source retrieval and citation verification.",
+        "Iterative Research & Self-Critique Loop",
+        "Grounded retrieval and mandatory citation verification before generating the final technical report:",
         "07 / 10",
     )
-    s7.add_bento_card(
-        48, 145, 204, 330, "F8F9FA", "4285F4",
-        "01 | PLAN", "1A73E8",
-        "create_research_plan", "202124",
-        "Decomposes complex prompts into 3 targeted sub-questions and recommends search queries.",
-        "5F6368",
-    )
-    s7.add_bento_card(
-        268, 145, 204, 330, "F8F9FA", "FBBC04",
-        "02 | SEARCH", "B06000",
-        "search_curated_kb / arxiv", "202124",
-        "Retrieves grounded evidence with explicit IDs ([KB-...], [ARXIV-...], [WIKI-...]) and offline fallbacks.",
-        "5F6368",
-    )
-    s7.add_bento_card(
-        488, 145, 204, 330, "F8F9FA", "EA4335",
-        "03 | CRITIQUE", "C5221F",
-        "critique_research_draft", "202124",
-        "Audits draft claims for >= 2 distinct citations and depth; triggers revision if incomplete.",
-        "5F6368",
-    )
-    s7.add_bento_card(
-        708, 145, 204, 330, "F8F9FA", "34A853",
-        "04 | REPORT", "137333",
-        "Cited Markdown Output", "202124",
-        "Synthesizes final Markdown brief with inline [SOURCE_ID] tags and a verified ## References section.",
-        "5F6368",
+    stages = [
+        ("01 • PLAN", "1A73E8", "4285F4", "create_research_plan", "Decomposes complex prompts into structured sub-questions and targeted search queries."),
+        ("02 • SEARCH", "B06000", "FBBC04", "search_curated_kb / arxiv", "Retrieves evidence with explicit IDs ([KB-...], [ARXIV-...], [WIKI-...]) and offline fallbacks."),
+        ("03 • CRITIQUE", "C5221F", "EA4335", "critique_research_draft", "Audits draft claims for >= 2 distinct citations and depth; triggers revision if incomplete."),
+        ("04 • REPORT", "137333", "34A853", "research-report CLI", "Outputs Markdown with inline [SOURCE_ID] citations and a verified ## References section."),
+    ]
+    for i, (kicker, kcol, bar_col, fn_name, desc) in enumerate(stages):
+        cx = 48 + i * 220
+        s7.add_box(
+            cx, 136, 204, 330,
+            [
+                (kicker, "Google Sans", 10, kcol, True),
+                ("", "Google Sans Text", 4, "202124", False),
+                (fn_name, "Google Sans Mono", 11, "202124", True),
+                ("", "Google Sans Text", 8, "5F6368", False),
+                (desc, "Google Sans Text", 11, "5F6368", False),
+            ],
+            fill_hex="F8F9FA", border_hex="DADCE0", rounded=True, pad_l=16, pad_t=22, pad_r=16, pad_b=16,
+        )
+        # Top colored accent bar on each stage card
+        s7.add_rect(cx + 2, 136, 200, 6, bar_col)
+
+    s7.add_footer(
+        False,
+        "Deterministic offline fallbacks guarantee reproducible runs in CI/CD and sandboxed environments",
+        "app/tools.py",
+        "1A73E8",
     )
     slides.append(s7)
 
-    # SLIDE 8: Running Locally & Visual Debugging + Evaluations (Dark Stage)
+    # =========================================================================
+    # SLIDE 08: LangGraph Studio & Vertex AI Evaluations (Dark Stage #0E1015)
+    # =========================================================================
     s8 = SlideBuilder("0E1015")
     s8.add_header(
         True,
-        "Live Demo | Act 2 & Act 3",
+        "Live Demo  •  Act 2 & Act 3",
         "81C995",
-        "LangGraph Studio & Vertex AI Evaluations",
+        "LangGraph Studio & Vertex AI Evaluations.",
         "Boot LangGraph Studio via agents-cli playground and grade traces with Vertex AI Eval Service.",
         "08 / 10",
     )
-    s8.add_code_card(
-        48, 145, 420, 330,
-        "1. RUN & INSPECT IN LANGGRAPH STUDIO",
-        "8AB4F8",
-        "$ agents-cli --help | grep -E \"playground|run \"\n"
-        "  playground  Start LangGraph server. [↑ langchain]\n"
-        "  run         Run compiled graph.     [↑ langchain]\n\n"
-        "$ agents-cli info\n"
-        "$ agents-cli run \"How do extensions work?\"\n"
-        "WARNING:root:agents-cli: applying 6 extension command(s)\n\n"
-        "$ agents-cli playground\n"
-        "> Boots LangGraph Studio on http://localhost:8080",
+    s8.add_box(
+        48, 130, 420, 340,
+        [
+            ("1. RUN & INSPECT IN LANGGRAPH STUDIO", "Google Sans", 10, "8AB4F8", True),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ('$ agents-cli --help | grep -E "playground|run "', "Google Sans Mono", 9.5, "E8EAED", False),
+            ([("  playground  Start LangGraph server. ", "Google Sans Mono", 9.5, "E8EAED", False), ("[↑ langchain]", "Google Sans Mono", 9.5, "81C995", True)]),
+            ([("  run         Run compiled graph.     ", "Google Sans Mono", 9.5, "E8EAED", False), ("[↑ langchain]", "Google Sans Mono", 9.5, "81C995", True)]),
+            ("", "Google Sans Mono", 6, "E8EAED", False),
+            ('$ agents-cli run "How do Agents CLI extensions work?"', "Google Sans Mono", 9.5, "E8EAED", False),
+            ("WARNING:root:agents-cli: applying 6 extension command(s)", "Google Sans Mono", 9.5, "FDD663", False),
+            ("", "Google Sans Mono", 6, "E8EAED", False),
+            ("$ agents-cli playground", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("> Boots LangGraph Studio on http://localhost:8080", "Google Sans Mono", 9.5, "81C995", True),
+        ],
+        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=18, pad_t=16, pad_r=18, pad_b=16,
     )
-    s8.add_code_card(
-        492, 145, 420, 330,
-        "2. OVERRIDDEN GENERATE + NATIVE GRADE",
+    s8.add_box(
+        492, 130, 420, 340,
+        [
+            ("2. OVERRIDDEN GENERATE + NATIVE GRADE", "Google Sans", 10, "81C995", True),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("# Overridden: Drives LangGraph CompiledStateGraph", "Google Sans Mono", 9.5, "8AB4F8", False),
+            ("$ agents-cli eval generate \\", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("    --dataset tests/eval/datasets/basic-dataset.json \\", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("    -o tests/eval/output/", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("", "Google Sans Mono", 6, "E8EAED", False),
+            ("# Native: Scores traces via Vertex AI Eval Service", "Google Sans Mono", 9.5, "81C995", False),
+            ("$ agents-cli eval grade \\", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("    --traces tests/eval/output/basic-dataset.json \\", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("    --config tests/eval/eval_config.yaml", "Google Sans Mono", 9.5, "E8EAED", False),
+        ],
+        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=18, pad_t=16, pad_r=18, pad_b=16,
+    )
+    s8.add_footer(
+        True,
+        "Unsupported ADK-simulator commands (eval dataset) exit cleanly with an explanation",
+        "Standard EvaluationDataset Schema",
         "81C995",
-        "# Overridden: Drives LangGraph CompiledStateGraph\n"
-        "$ agents-cli eval generate \\\n"
-        "    --dataset tests/eval/datasets/basic-dataset.json \\\n"
-        "    -o tests/eval/output/\n\n"
-        "# Native: Scores traces via Vertex AI Eval Service\n"
-        "$ agents-cli eval grade \\\n"
-        "    --traces tests/eval/output/basic-dataset.json \\\n"
-        "    --config tests/eval/eval_config.yaml\n\n"
-        "# Clean refusal on ADK-only simulator:\n"
-        "$ agents-cli eval dataset synthesize",
     )
     slides.append(s8)
 
-    # SLIDE 9: Custom Enterprise Governance Extension (Dark Stage)
+    # =========================================================================
+    # SLIDE 09: Custom Enterprise Governance Extension (Dark Stage #0E1015)
+    # =========================================================================
     s9 = SlideBuilder("0E1015")
     s9.add_header(
         True,
-        "Live Demo | Act 4",
+        "Live Demo  •  Act 4",
         "F28B82",
-        "Authoring Custom Enterprise Extensions (sbom-deploy)",
+        "Policy-as-Code: Custom sbom-deploy Gate",
         "AGENTS_CLI_DISABLE_OVERRIDES=1 lets wrapper scripts run Syft + Grype checks and call native deploy without recursion.",
         "09 / 10",
     )
-    s9.add_code_card(
-        48, 145, 420, 330,
-        "extensions/sbom-deploy/agents-cli-extension.yaml",
-        "FDD663",
-        "schema: agents-cli-extension/v1alpha1\n"
-        "name: sbom-deploy\n"
-        "description: Scan project SBOM, then run native deploy.\n"
-        "requires:\n"
-        "  agents_cli: \">=1.5,<2\"\n"
-        "  on_incompatible: warn\n\n"
-        "commands:\n"
-        "  override:\n"
-        "    deploy:\n"
-        "      run: [\"bash\", \"scripts/sbom_then_deploy.sh\"]\n"
-        "  add:\n"
-        "    sbom-report:\n"
-        "      run: [\"bash\", \"scripts/sbom_report.sh\"]",
+    s9.add_box(
+        48, 130, 420, 340,
+        [
+            ("AGENTS-CLI-EXTENSION.YAML", "Google Sans", 10, "FDD663", True),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("schema: agents-cli-extension/v1alpha1", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("name: sbom-deploy", "Google Sans Mono", 9.5, "81C995", False),
+            ("description: Scan project SBOM, then run native deploy.", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("requires:", "Google Sans Mono", 9.5, "E8EAED", False),
+            ('  agents_cli: ">=1.5,<2"', "Google Sans Mono", 9.5, "FDD663", False),
+            ("  on_incompatible: warn", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("commands:", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("  override:", "Google Sans Mono", 9.5, "8AB4F8", False),
+            ("    deploy:", "Google Sans Mono", 9.5, "E8EAED", False),
+            ('      run: ["bash", "scripts/sbom_then_deploy.sh"]', "Google Sans Mono", 9.5, "81C995", False),
+            ("  add:", "Google Sans Mono", 9.5, "8AB4F8", False),
+            ("    sbom-report:", "Google Sans Mono", 9.5, "E8EAED", False),
+            ('      run: ["bash", "scripts/sbom_report.sh"]', "Google Sans Mono", 9.5, "81C995", False),
+        ],
+        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=18, pad_t=16, pad_r=18, pad_b=16,
     )
-    s9.add_code_card(
-        492, 145, 420, 330,
-        "extensions/sbom-deploy/scripts/sbom_then_deploy.sh",
+    s9.add_box(
+        492, 130, 420, 340,
+        [
+            ("SCRIPTS/SBOM_THEN_DEPLOY.SH", "Google Sans", 10, "81C995", True),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("#!/usr/bin/env bash", "Google Sans Mono", 9.5, "9AA0A6", False),
+            ("set -euo pipefail", "Google Sans Mono", 9.5, "E8EAED", False),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ('echo "[sbom-deploy] Generating CycloneDX SBOM..."', "Google Sans Mono", 9.5, "E8EAED", False),
+            ("syft dir:. -o cyclonedx-json > /tmp/sbom.cdx.json", "Google Sans Mono", 9.5, "FDD663", False),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ('echo "[sbom-deploy] Scanning for critical CVEs..."', "Google Sans Mono", 9.5, "E8EAED", False),
+            ("grype sbom:/tmp/sbom.cdx.json --fail-on critical", "Google Sans Mono", 9.5, "FDD663", False),
+            ("", "Google Sans Mono", 4, "E8EAED", False),
+            ("# Loader sets AGENTS_CLI_DISABLE_OVERRIDES=1", "Google Sans Mono", 9.5, "8AB4F8", True),
+            ("# Delegates to built-in deploy with zero recursion!", "Google Sans Mono", 9.5, "8AB4F8", True),
+            ('exec agents-cli deploy "$@"', "Google Sans Mono", 9.5, "81C995", True),
+        ],
+        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=18, pad_t=16, pad_r=18, pad_b=16,
+    )
+    s9.add_footer(
+        True,
+        "$ agents-cli extension add local@./extensions/sbom-deploy --yes",
+        "AGENTS_CLI_DISABLE_OVERRIDES=1",
         "81C995",
-        "#!/usr/bin/env bash\n"
-        "set -euo pipefail\n\n"
-        "echo \"[sbom-deploy] Generating CycloneDX SBOM...\"\n"
-        "syft dir:. -o cyclonedx-json > /tmp/sbom.cdx.json\n\n"
-        "echo \"[sbom-deploy] Scanning for critical CVEs...\"\n"
-        "grype sbom:/tmp/sbom.cdx.json --fail-on critical\n\n"
-        "# Loader sets AGENTS_CLI_DISABLE_OVERRIDES=1\n"
-        "# Delegates to built-in deploy with zero recursion!\n"
-        "exec agents-cli deploy \"$@\"",
     )
     slides.append(s9)
 
-    # SLIDE 10: Closing Bento Grid Summary (Dark Stage)
+    # =========================================================================
+    # SLIDE 10: Closing Bento Grid Summary + Bottom CTA Bar (Dark Stage #0E1015)
+    # =========================================================================
     s10 = SlideBuilder("0E1015")
     s10.add_header(
         True,
         "Google Cloud Next '27 Summary",
         "8AB4F8",
         "The Open Agent Development Lifecycle",
-        "Clone & Run Live: github.com/sanketbisne/scalfod-langgraph-agentscli",
+        "",
         "10 / 10",
     )
-    s10.add_bento_card(
-        48, 140, 276, 155, "161922", "2D3343",
-        "01 | OPEN FRAMEWORKS", "8AB4F8",
-        "LangChain & LangGraph", "FFFFFF",
-        "First-party template with zero google-adk dependency and unified CompiledStateGraph.",
-        "9AA0A6",
+    bento_tiles = [
+        (48, 100, "01 • OPEN FRAMEWORKS", "8AB4F8", "LangChain & LangGraph", "First-party template with zero google-adk dependency and unified CompiledStateGraph."),
+        (342, 100, "02 • LOCAL DEVELOPER EXPERIENCE", "81C995", "LangGraph Studio", "agents-cli playground boots LangGraph dev server on port 8080 for visual graph inspection."),
+        (636, 100, "03 • QUALITY FLYWHEEL", "FDD663", "Vertex AI Evaluations", "Overridden eval generate pairs seamlessly with native eval grade and eval compare."),
+        (48, 255, "04 • ENTERPRISE GOVERNANCE", "F28B82", "SBOM Pre-Deploy Gates", "Wrap deploy with Syft + Grype checks and delegate safely via AGENTS_CLI_DISABLE_OVERRIDES=1."),
+        (342, 255, "05 • SUPPLY-CHAIN SECURITY", "8AB4F8", "SHA Lockfile Discipline", "Pinned commit SHAs in agents-cli-extensions.yaml ensure bit-for-bit reproducible CI builds."),
+        (636, 255, "06 • SERVERLESS PRODUCTION", "81C995", "Cloud Run + A2A Protocol", "Exposes /.well-known/agent.json and /a2a/tasks/send over FastAPI on port 8080."),
+    ]
+    for bx, by, kicker, kcol, heading, desc in bento_tiles:
+        s10.add_box(
+            bx, by, 276, 140,
+            [
+                (kicker, "Google Sans Mono", 8.5, kcol, True),
+                (heading, "Google Sans Display", 15, "FFFFFF", True),
+                ("", "Google Sans Text", 4, "9AA0A6", False),
+                (desc, "Google Sans Text", 10, "9AA0A6", False),
+            ],
+            fill_hex="161922", border_hex="2D3343", rounded=True, pad_l=16, pad_t=14, pad_r=16, pad_b=12,
+        )
+
+    # Bottom Callout Bar matching HTML Slide 10
+    s10.add_rect(48, 415, 864, 72, "131C31", "4285F4", border_w_pt=1.5, rounded=True, adj=12000)
+    s10.add_box(
+        68, 425, 560, 52,
+        [
+            ("GET STARTED TODAY", "Google Sans", 9, "8AB4F8", True),
+            ("https://github.com/sanketbisne/scalfod-langgraph-agentscli", "Google Sans Mono", 14, "FFFFFF", True),
+        ],
+        pad_l=0, pad_t=2, pad_r=0, pad_b=2,
     )
-    s10.add_bento_card(
-        342, 140, 276, 155, "161922", "2D3343",
-        "02 | VISUAL DEBUGGING", "81C995",
-        "LangGraph Studio", "FFFFFF",
-        "agents-cli playground launches LangGraph server on port 8080.",
-        "9AA0A6",
-    )
-    s10.add_bento_card(
-        636, 140, 276, 155, "161922", "2D3343",
-        "03 | QUALITY FLYWHEEL", "FDD663",
-        "Vertex AI Evaluations", "FFFFFF",
-        "Overridden eval generate pairs with native Vertex AI eval grade.",
-        "9AA0A6",
-    )
-    s10.add_bento_card(
-        48, 315, 276, 155, "161922", "2D3343",
-        "04 | POLICY AS CODE", "F28B82",
-        "SBOM Pre-Deploy Gates", "FFFFFF",
-        "Syft + Grype checks with AGENTS_CLI_DISABLE_OVERRIDES=1.",
-        "9AA0A6",
-    )
-    s10.add_bento_card(
-        342, 315, 276, 155, "161922", "2D3343",
-        "05 | SUPPLY CHAIN", "8AB4F8",
-        "SHA Lockfile Pinning", "FFFFFF",
-        "Bit-for-bit reproducible CI via agents-cli-extensions.yaml.",
-        "9AA0A6",
-    )
-    s10.add_bento_card(
-        636, 315, 276, 155, "161922", "2D3343",
-        "06 | PRODUCTION SERVING", "81C995",
-        "Cloud Run + A2A", "FFFFFF",
-        "Standard FastAPI + A2A container contract on port 8080.",
-        "9AA0A6",
+    s10.add_box(
+        675, 433, 215, 36,
+        [("uvx google-agents-cli setup", "Google Sans Mono", 10, "FFFFFF", True)],
+        fill_hex="1A73E8", rounded=True, adj=20000, align="c", valign="ctr",
     )
     slides.append(s10)
 
@@ -738,7 +931,7 @@ def write_pptx(output_path: Path) -> None:
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentation.main+xml"/>
   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
@@ -897,7 +1090,7 @@ def write_pptx(output_path: Path) -> None:
             zf.writestr(f"ppt/slides/slide{idx}.xml", slide.to_xml())
             zf.writestr(f"ppt/slides/_rels/slide{idx}.xml.rels", slide_rels_xml)
 
-    print(f"Generated {len(slides)}-slide PPTX at: {output_path} ({output_path.stat().st_size} bytes)")
+    print(f"Generated 1-to-1 high-fidelity {len(slides)}-slide PPTX at: {output_path} ({output_path.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":
