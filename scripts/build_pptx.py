@@ -35,11 +35,14 @@ class SlideBuilder:
     def __init__(self, bg_hex: str) -> None:
         self.bg_hex = _hex(bg_hex)
         self.shapes: list[str] = []
+        self.animated_spids: list[tuple[int, str, int]] = []  # (spid, effect_type, delay_ms)
         self._id = 2
 
-    def _next_id(self) -> int:
+    def _next_id(self, animate: str | None = "fly_up", delay_ms: int = 180) -> int:
         val = self._id
         self._id += 1
+        if animate:
+            self.animated_spids.append((val, animate, delay_ms))
         return val
 
     def add_rect(
@@ -53,8 +56,9 @@ class SlideBuilder:
         border_w_pt: float = 1.0,
         rounded: bool = False,
         adj: int = 5000,
+        animate: str | None = None,
     ) -> None:
-        sid = self._next_id()
+        sid = self._next_id(animate=animate)
         x, y, w, h = int(x_pt * PT), int(y_pt * PT), int(w_pt * PT), int(h_pt * PT)
         geom = "roundRect" if rounded else "rect"
         av = f'<a:avLst><a:gd name="adj" fmla="val {adj}"/></a:avLst>' if rounded else "<a:avLst/>"
@@ -99,8 +103,10 @@ class SlideBuilder:
         align: str = "l",
         valign: str = "t",
         line_spacing_pct: int = 118000,
+        animate: str | None = "fly_up",
+        delay_ms: int = 180,
     ) -> None:
-        sid = self._next_id()
+        sid = self._next_id(animate=animate, delay_ms=delay_ms)
         x, y, w, h = int(x_pt * PT), int(y_pt * PT), int(w_pt * PT), int(h_pt * PT)
         geom = "roundRect" if rounded else "rect"
         av = f'<a:avLst><a:gd name="adj" fmla="val {adj}"/></a:avLst>' if rounded else "<a:avLst/>"
@@ -238,6 +244,67 @@ class SlideBuilder:
 
     def to_xml(self) -> str:
         shapes_xml = "\n".join(self.shapes)
+        par_xml_list: list[str] = []
+        bld_xml_list: list[str] = []
+        ctn_id = 4
+        for idx, (spid, effect_type, delay_ms) in enumerate(self.animated_spids):
+            node_type = "withEffect" if idx == 0 else "afterEffect"
+            actual_delay = 100 if idx == 0 else delay_ms
+            c_mid = ctn_id
+            c_inner = ctn_id + 1
+            c_set = ctn_id + 2
+            c_anim = ctn_id + 3
+            ctn_id += 4
+
+            if effect_type == "fly_up":
+                preset_id = 2
+                preset_sub = 4
+                motion_xml = f"""                              <p:animEffect transition="in" filter="fade">
+                                <p:cBhvr>
+                                  <p:cTn id="{c_anim}" dur="450"/>
+                                  <p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl>
+                                </p:cBhvr>
+                              </p:animEffect>"""
+            else:
+                preset_id = 10
+                preset_sub = 0
+                motion_xml = f"""                              <p:animEffect transition="in" filter="fade">
+                                <p:cBhvr>
+                                  <p:cTn id="{c_anim}" dur="450"/>
+                                  <p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl>
+                                </p:cBhvr>
+                              </p:animEffect>"""
+
+            par_xml_list.append(
+                f"""                      <p:par>
+                        <p:cTn id="{c_mid}" fill="hold">
+                          <p:stCondLst><p:cond delay="{actual_delay}"/></p:stCondLst>
+                          <p:childTnLst>
+                            <p:par>
+                              <p:cTn id="{c_inner}" presetID="{preset_id}" presetClass="entr" presetSubtype="{preset_sub}" fill="hold" grpId="0" nodeType="{node_type}">
+                                <p:stCondLst><p:cond delay="0"/></p:stCondLst>
+                                <p:childTnLst>
+                                  <p:set>
+                                    <p:cBhvr>
+                                      <p:cTn id="{c_set}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>
+                                      <p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl>
+                                      <p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst>
+                                    </p:cBhvr>
+                                    <p:to><p:strVal val="visible"/></p:to>
+                                  </p:set>
+{motion_xml}
+                                </p:childTnLst>
+                              </p:cTn>
+                            </p:par>
+                          </p:childTnLst>
+                        </p:cTn>
+                      </p:par>"""
+            )
+            bld_xml_list.append(f'    <p:bldP spid="{spid}" grpId="0"/>')
+
+        children_timing = "\n".join(par_xml_list)
+        bld_lst_xml = "\n".join(bld_xml_list)
+
         return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -267,7 +334,38 @@ class SlideBuilder:
     </p:spTree>
   </p:cSld>
   <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
-  <p:transition spd="med"><p:fade/></p:transition>
+  <p:transition spd="med" advClick="1"><p:fade/></p:transition>
+  <p:timing>
+    <p:tnLst>
+      <p:par>
+        <p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot">
+          <p:childTnLst>
+            <p:seq concurrent="1" nextAc="seek">
+              <p:cTn id="2" dur="indefinite" nodeType="mainSeq">
+                <p:childTnLst>
+                  <p:par>
+                    <p:cTn id="3" fill="hold">
+                      <p:stCondLst>
+                        <p:cond delay="0"/>
+                      </p:stCondLst>
+                      <p:childTnLst>
+{children_timing}
+                      </p:childTnLst>
+                    </p:cTn>
+                  </p:par>
+                </p:childTnLst>
+              </p:cTn>
+              <p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>
+              <p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst>
+            </p:seq>
+          </p:childTnLst>
+        </p:cTn>
+      </p:par>
+    </p:tnLst>
+    <p:bldLst>
+{bld_lst_xml}
+    </p:bldLst>
+  </p:timing>
 </p:sld>"""
 
 
@@ -622,23 +720,47 @@ def build_slides() -> list[SlideBuilder]:
         "Scaffolding and extension installation happen together. Nothing needs to be installed globally.",
         "05 / 10",
     )
+    s5.add_rect(48, 130, 864, 340, "131314", "3C4043", rounded=True, adj=6000)
+    # Terminal Window Header Bar
+    s5.add_rect(48, 130, 864, 32, "1E1F22", "3C4043", rounded=True, adj=6000)
+    s5.add_rect(64, 141, 10, 10, "EA4335", rounded=True, adj=50000)
+    s5.add_rect(80, 141, 10, 10, "FBBC04", rounded=True, adj=50000)
+    s5.add_rect(96, 141, 10, 10, "34A853", rounded=True, adj=50000)
     s5.add_box(
-        48, 130, 864, 340,
+        118, 134, 420, 24,
+        [("zsh — scalfod-langgraph-agentscli", "Google Sans Mono", 9.5, "9AA0A6", False)],
+        pad_l=0, pad_t=2, pad_r=0, pad_b=2, valign="ctr",
+    )
+    # Sequential Terminal Block 1: Scaffold command
+    s5.add_box(
+        68, 174, 824, 92,
         [
             ("# 1. Scaffold directly from the first-party LangChain template", "Google Sans Mono", 11, "8AB4F8", False),
             ("$ agents-cli create scalfod-langgraph-agentscli \\", "Google Sans Mono", 11, "E8EAED", False),
             ("    --agent google/agents-cli/extensions/langchain/template@v1.8.0 \\", "Google Sans Mono", 11, "E8EAED", False),
             ("    -d cloud_run", "Google Sans Mono", 11, "E8EAED", False),
-            ("", "Google Sans Mono", 6, "E8EAED", False),
+        ],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+    # Sequential Terminal Block 2: Install & output
+    s5.add_box(
+        68, 276, 824, 78,
+        [
             ("$ cd scalfod-langgraph-agentscli && agents-cli install", "Google Sans Mono", 11, "E8EAED", False),
-            ("Agents CLI v1.8.0 • Fetching remote template: google/agents-cli/extensions/langchain/template@v1.8.0", "Google Sans Mono", 11, "81C995", False),
-            ("> ✓ Connected to project: your-project • Your agent project is ready.", "Google Sans Mono", 11, "81C995", False),
-            ("", "Google Sans Mono", 6, "E8EAED", False),
+            ("Agents CLI v1.8.0 • Fetching remote template: google/agents-cli/extensions/langchain/template@v1.8.0", "Google Sans Mono", 10.5, "81C995", False),
+            ("> ✓ Connected to project: your-project • Your agent project is ready.", "Google Sans Mono", 10.5, "81C995", True),
+        ],
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
+    )
+    # Sequential Terminal Block 3: Verify zero ADK dependency
+    s5.add_box(
+        68, 366, 824, 84,
+        [
             ("# 2. Prove zero google-adk dependency in pyproject.toml and app/", "Google Sans Mono", 11, "8AB4F8", False),
             ('$ grep -r "google.adk\\|google-adk" pyproject.toml app/ ; echo "exit: $?"', "Google Sans Mono", 11, "E8EAED", False),
             ("exit: 1   # Zero google-adk dependency verified!", "Google Sans Mono", 11, "FDD663", True),
         ],
-        fill_hex="131314", border_hex="3C4043", rounded=True, pad_l=22, pad_t=20, pad_r=22, pad_b=20,
+        pad_l=0, pad_t=0, pad_r=0, pad_b=0,
     )
     s5.add_footer(
         True,
