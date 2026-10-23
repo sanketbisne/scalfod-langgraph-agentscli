@@ -190,9 +190,32 @@ class SlideBuilder:
         )
 
     def add_four_color_bar(self) -> None:
-        colors = ["4285F4", "EA4335", "FBBC04", "34A853"]
-        for i, c in enumerate(colors):
-            self.add_rect(i * 240, 0, 240, 5, c)
+        sid = self._next_id(animate="fade", delay_ms=80)
+        w = int(960 * PT)
+        h = int(6 * PT)
+        self.shapes.append(
+            f"""<p:sp>
+  <p:nvSpPr>
+    <p:cNvPr id="{sid}" name="GradientBar {sid}"/>
+    <p:cNvSpPr/>
+    <p:nvPr/>
+  </p:nvSpPr>
+  <p:spPr>
+    <a:xfrm><a:off x="0" y="0"/><a:ext cx="{w}" cy="{h}"/></a:xfrm>
+    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+    <a:gradFill flip="none" rotWithShape="1">
+      <a:gsLst>
+        <a:gs pos="0"><a:srgbClr val="4285F4"/></a:gs>
+        <a:gs pos="33000"><a:srgbClr val="EA4335"/></a:gs>
+        <a:gs pos="66000"><a:srgbClr val="FBBC04"/></a:gs>
+        <a:gs pos="100000"><a:srgbClr val="34A853"/></a:gs>
+      </a:gsLst>
+      <a:lin ang="0" scaled="1"/>
+    </a:gradFill>
+    <a:ln><a:noFill/></a:ln>
+  </p:spPr>
+</p:sp>"""
+        )
 
     def add_header(
         self,
@@ -652,34 +675,49 @@ def build_slides() -> list[SlideBuilder]:
     s4.add_box(
         48, 226, 424, 140,
         [
-            [
-                ("6 Overridden Runtime Commands   ", "Google Sans", 12, "1967D2", True),
-                ("[↑ langchain]", "Google Sans Mono", 10, "1967D2", True),
-            ],
-            ("", "Google Sans Text", 4, "3C4043", False),
-            ("• run -> uv run python scripts/run.py", "Google Sans Mono", 9.5, "3C4043", False),
-            ("• playground -> uv run langgraph dev --port 8080", "Google Sans Mono", 9.5, "3C4043", False),
-            ("• eval.generate -> uv run python scripts/eval_generate.py", "Google Sans Mono", 9.5, "3C4043", False),
-            ("• publish.gemini-enterprise & eval.dataset / optimize", "Google Sans Mono", 9.5, "3C4043", False),
+            ("6 Overridden Runtime Commands", "Google Sans", 11.5, "1967D2", True),
+            ("", "Google Sans Text", 8, "3C4043", False),
+            (
+                "run • playground (LangGraph Studio) • eval.generate • publish.gemini-enterprise • eval.dataset • eval.optimize",
+                "Google Sans Mono",
+                10,
+                "3C4043",
+                False,
+            ),
         ],
         fill_hex="F8FAFF", border_hex="4285F4", border_w_pt=2.0, rounded=True, adj=8000,
-        pad_l=16, pad_t=12, pad_r=16, pad_b=12,
+        pad_l=18, pad_t=16, pad_r=18, pad_b=16,
     )
+    # Right-aligned pill badge inside Left Card
+    s4.add_box(
+        352, 238, 104, 24,
+        [("[↑ langchain]", "Google Sans Mono", 9, "1967D2", True)],
+        fill_hex="E8F0FE", rounded=True, adj=25000, align="c", valign="ctr",
+        pad_l=4, pad_t=2, pad_r=4, pad_b=2,
+    )
+
     s4.add_box(
         488, 226, 424, 140,
         [
-            [
-                ("18+ Native Production Commands   ", "Google Sans", 12, "137333", True),
-                ("[Built-In]", "Google Sans Mono", 10, "137333", True),
-            ],
-            ("", "Google Sans Text", 4, "3C4043", False),
-            ("• deploy (Cloud Run / GKE via FastAPI A2A)", "Google Sans Mono", 9.5, "3C4043", False),
-            ("• eval grade / eval compare / eval analyze (Vertex AI)", "Google Sans Mono", 9.5, "3C4043", False),
-            ("• infra (Terraform) & scaffold create / enhance / upgrade", "Google Sans Mono", 9.5, "3C4043", False),
-            ("• extension add / list / update & install / info / lint", "Google Sans Mono", 9.5, "3C4043", False),
+            ("18+ Native Production Commands", "Google Sans", 11.5, "137333", True),
+            ("", "Google Sans Text", 8, "3C4043", False),
+            (
+                "deploy • eval grade • eval compare • infra (Terraform) • scaffold • extension • install • lint",
+                "Google Sans Mono",
+                10,
+                "3C4043",
+                False,
+            ),
         ],
         fill_hex="F6FEF8", border_hex="34A853", border_w_pt=2.0, rounded=True, adj=8000,
-        pad_l=16, pad_t=12, pad_r=16, pad_b=12,
+        pad_l=18, pad_t=16, pad_r=18, pad_b=16,
+    )
+    # Right-aligned pill badge inside Right Card
+    s4.add_box(
+        822, 238, 74, 24,
+        [("Built-In", "Google Sans Mono", 9, "137333", True)],
+        fill_hex="E6F4EA", rounded=True, adj=25000, align="c", valign="ctr",
+        pad_l=4, pad_t=2, pad_r=4, pad_b=2,
     )
 
     # Layer 3: Google Cloud Production Foundation
